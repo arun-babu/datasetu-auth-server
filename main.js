@@ -758,7 +758,7 @@ function is_secure (req, res, cert, validate_email = true)
 	{
 		const origin = req.headers.origin.toLowerCase();
 
-		// e.g Origin = https://www.datasetu.org.in:8443/
+		// e.g Origin = https://www.datasetu.org:8443/
 
 		if (! origin.startsWith("https://"))
 		{
@@ -846,7 +846,7 @@ function has_certificate_been_revoked (socket, cert, CRL)
 	}
 
 	// If it was issued by a sub-CA then check the sub-CA's cert too
-	// Assuming depth is <= 3. ca@datasetu.org.in -> sub-CA -> user
+	// Assuming depth is <= 3. ca@datasetu.org -> sub-CA -> user
 
 	if (cert_issuer.startsWith("datasetu.sub.ca@"))
 	{
@@ -891,7 +891,7 @@ function has_certificate_been_revoked (socket, cert, CRL)
 
 				for (const c of CRL)
 				{
-					if (c.issuer === "ca@datasetu.org.in")
+					if (c.issuer === "ca@datasetu.org")
 					{
 						const serial = c.serial
 								.toLowerCase()
@@ -977,7 +977,7 @@ function is_datasetu_certificate(cert)
 
 	// certificate issuer should be DataSetu CA or a DataSetu sub-CA
 
-	return (email ==="ca@datasetu.org.in" || email.startsWith("datasetu.sub.ca@"));
+	return (email ==="ca@datasetu.org" || email.startsWith("datasetu.sub.ca@"));
 }
 
 function body_to_json (body)
