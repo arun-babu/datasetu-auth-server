@@ -1,7 +1,7 @@
-#!/bin/sh
+ud#!/bin/sh
 
-CRL_JS="https://raw.githubusercontent.com/iudx/iudx-auth-server/master/crl.js"
-MAIN_JS="https://raw.githubusercontent.com/iudx/iudx-auth-server/master/main.js"
+CRL_JS="https://raw.githubusercontent.com/datasetu/datasetu-auth-server/master/crl.js"
+MAIN_JS="https://raw.githubusercontent.com/datasetu/datasetu-auth-server/master/main.js"
 
 if ! ftp -o - $CRL_JS > crl.js
 then
