@@ -784,7 +784,7 @@ function is_secure (req, res, cert, validate_email = true)
 		}
 		else
 		{
-			for (const w in WHITELISTED_ENDSWITH)
+			for (const w of WHITELISTED_ENDSWITH)
 			{
 				if (origin_domain.endsWith(w))
 				{
