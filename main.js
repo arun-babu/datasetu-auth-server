@@ -778,16 +778,11 @@ function is_secure (req, res, cert, validate_email = true)
 
 		let whitelisted = false;
 
-		for (const w in WHITELISTED_DOMAINS)
+		if (WHITELISTED_DOMAINS.indexOf(origin_domain) >= 0)
 		{
-			if (origin_domain === w)
-			{
-				whitelisted = true;
-				break;
-			}
+			whitelisted = true;
 		}
-
-		if (! whitelisted)
+		else
 		{
 			for (const w in WHITELISTED_ENDSWITH)
 			{
