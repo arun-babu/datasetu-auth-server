@@ -1,18 +1,18 @@
-# India Urban Data eXchange (IUDX) Authentication, Authorization, and Accounting (AAA) Server
+# DataSetu Authentication, Authorization, and Accounting (AAA) Server
 ![ISC license](https://img.shields.io/badge/license-ISC-blue.svg) [![builds.sr.ht status](https://builds.sr.ht/~datasetu-auth.svg)](https://builds.sr.ht/~datasetu-auth?) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6e6d74bd17a146c1a8288c4d98ca3e26)](https://www.codacy.com/gh/datasetu/datasetu-auth-server?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=datasetu/datasetu-auth-server&amp;utm_campaign=Badge_Grade) [![CodeFactor](https://www.codefactor.io/repository/github/datasetu/datasetu-auth-server/badge)](https://www.codefactor.io/repository/github/datasetu/datasetu-auth-server) [![Known Vulnerabilities](https://snyk.io/test/github/datasetu/datasetu-auth-server/badge.svg?targetFile=package.json)](https://snyk.io/test/github/datasetu/datasetu-auth-server?targetFile=package.json)
 
 [![dependencies Status](https://david-dm.org/datasetu/datasetu-auth-server/status.svg)](https://david-dm.org/datasetu/datasetu-auth-server) [![devDependencies Status](https://david-dm.org/datasetu/datasetu-auth-server/dev-status.svg)](https://david-dm.org/datasetu/datasetu-auth-server?type=dev)
 
-IUDX-AAA is the Authentication, Authorization, and Accounting server for accessing [IUDX](https://www.datasetu.org.in) services.
+DataSetu-AAA is the Authentication, Authorization, and Accounting server for accessing [DataSetu](https://datasetu.org) services.
 
 ## 1. Read the API documentation
-Please visit [IUDX Auth server](http://auth.datasetu.org.in) for APIs and flows.
+Please visit [DataSetu Auth server](http://auth.datasetu.org) for APIs and flows.
 
 ## 2. Installation
 ### 2.1 Install OpenBSD 6.7 (prerequisite)
 Please see [OpenBSD FAQ - Installation Guide](https://www.openbsd.org/faq/faq4.html). e.g. [INSTALLATION NOTES for OpenBSD/amd64 6.7](https://ftp.openbsd.org/pub/OpenBSD/6.7/amd64/INSTALL.amd64)
 
-### 2.2 Installation of IUDX Auth server (as root) 
+### 2.2 Installation of DataSetu Auth server (as root) 
 
 After installing OpenBSD, please run the command as root:
 
@@ -72,7 +72,7 @@ Below is the list of tables used. There are no join queries in the project.
 |-- README.md			// Readme file
 |-- er.plantuml			// The database structure in plantuml 
 |-- er.svg			// The database structure in svg format 
-|-- ca.datasetu.org.in.crt		// ca.datasetu.org.in's certificate
+|-- ca.datasetu.org.crt		// ca.datasetu.org's certificate
 |-- check.sh			// JavaScript linter
 |-- crl.js			// stores the certificate revocation list in DB
 |-- db-cleanup.sql		// cleans non-introspected tokens
