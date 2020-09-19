@@ -57,8 +57,8 @@ const pledge			= is_openbsd ? require("node-pledge")	: null;
 const unveil			= is_openbsd ? require("openbsd-unveil"): null;
 
 const NUM_CPUS			= os.cpus().length;
-const SERVER_NAME		= fs.readFileSync ("server.name","ascii").trim();  
-const DOCUMENTATION_LINK	= fs.readFileSync ("documentation.link","ascii").trim();  
+const SERVER_NAME		= fs.readFileSync ("server.name","ascii").trim();
+const DOCUMENTATION_LINK	= fs.readFileSync ("documentation.link","ascii").trim();
 
 const MAX_TOKEN_TIME		= 31536000; // in seconds (1 year)
 
@@ -108,8 +108,8 @@ const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
 	"/auth/v1/group/list"			: 3,
 });
 
-const WHITELISTED_DOMAINS	= fs.readFileSync("whitelist.domains","ascii").trim().split("\n"); 
-const WHITELISTED_ENDSWITH	= fs.readFileSync("whitelist.endswith","ascii").trim().split("\n"); 
+const WHITELISTED_DOMAINS	= fs.readFileSync("whitelist.domains","ascii").trim().split("\n");
+const WHITELISTED_ENDSWITH	= fs.readFileSync("whitelist.endswith","ascii").trim().split("\n");
 
 /* --- API statistics --- */
 
@@ -352,7 +352,7 @@ function show_statistics (req,res)
 	const time	= (new Date()).toJSON();
 
 	const response = {
-		time		: time, 
+		time		: time,
 		statistics	: []
 	};
 
@@ -793,7 +793,7 @@ function is_secure (req, res, cert, validate_email = true)
 				}
 			}
 		}
-		
+
 		if (! whitelisted)
 		{
 			return "Invalid 'origin' header; this website is not"	+
