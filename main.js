@@ -111,6 +111,8 @@ const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
 const WHITELISTED_DOMAINS	= fs.readFileSync("whitelist.domains","ascii").trim().split("\n");
 const WHITELISTED_ENDSWITH	= fs.readFileSync("whitelist.endswith","ascii").trim().split("\n");
 
+const LAUNCH_ADMIN_PANEL	= fs.readFileSync("admin.panel","ascii").trim() === "yes";
+
 /* --- API statistics --- */
 
 const statistics = {
@@ -344,32 +346,6 @@ const topup_failure_1 = STATIC_PAGES["topup-failure-1.html"];
 const topup_failure_2 = STATIC_PAGES["topup-failure-2.html"];
 
 /* --- functions --- */
-
-function show_statistics (req,res)
-{
-	const now	= Math.floor (Date.now() / 1000);
-	const diff	= now - statistics.start_time;
-	const time	= (new Date()).toJSON();
-
-	const response = {
-		time		: time,
-		statistics	: []
-	};
-
-	for (const api in statistics.api.count)
-	{
-		const rate = statistics.api.count[api]/diff;
-
-		response.statistics.push ({
-			api	: api,
-			count	: statistics.api.count[api],
-			rate	: rate
-		});
-	}
-
-	res.status(200).end(JSON.stringify(response,null,"\t") + "\n");
-}
-
 function is_valid_token (token, user = null)
 {
 	if (! is_string_safe(token))
@@ -561,7 +537,7 @@ function SERVE_HTML (req,res)
 	return true;
 }
 
-function END_SUCCESS (res, response = null)
+function SUCCESS (res, response = null)
 {
 	// if no response is given, just send success
 
@@ -574,7 +550,7 @@ function END_SUCCESS (res, response = null)
 	res.status(200).end(JSON.stringify(response) + "\n");
 }
 
-function END_ERROR (res, http_status, error, exception = null)
+function ERROR (res, http_status, error, exception = null)
 {
 	if (exception)
 		log("red", String(exception).replace(/\n/g," "));
@@ -608,6 +584,31 @@ function END_ERROR (res, http_status, error, exception = null)
 
 	delete res.socket;
 	delete res.locals;
+}
+
+function show_statistics (req,res)
+{
+	const now	= Math.floor (Date.now() / 1000);
+	const diff	= now - statistics.start_time;
+	const time	= (new Date()).toJSON();
+
+	const response = {
+		time		: time,
+		statistics	: []
+	};
+
+	for (const api in statistics.api.count)
+	{
+		const rate = statistics.api.count[api]/diff;
+
+		response.statistics.push ({
+			api	: api,
+			count	: statistics.api.count[api],
+			rate	: rate
+		});
+	}
+
+	res.status(200).end(JSON.stringify(response,null,"\t") + "\n");
 }
 
 function is_valid_email (email)
@@ -650,7 +651,7 @@ function is_valid_email (email)
 	if (split.length !== 2)
 		return false;
 
-	const user = split[0]; // the login
+	const user = split[0]; // the login email
 
 	if (user.length === 0 || user.length > 30)
 		return false;
@@ -1039,11 +1040,12 @@ function basic_security_check (req, res, next)
 	const api			= endpoint.replace(/\/v[1-2]\//,"/v1/");
 	const min_class_required	= MIN_CERT_CLASS_REQUIRED[api];
 
-	process.send(endpoint);
+	if (LAUNCH_ADMIN_PANEL)
+		process.send(endpoint);
 
 	if (! min_class_required)
 	{
-		return END_ERROR (
+		return ERROR (
 			res, 404,
 				"No such page/API. Please visit : "	+
 				DOCUMENTATION_LINK + " for documentation."
@@ -1052,7 +1054,7 @@ function basic_security_check (req, res, next)
 
 	if (! (res.locals.body = body_to_json(req.body)))
 	{
-		return END_ERROR (
+		return ERROR (
 			res, 400,
 			"Body is not a valid JSON"
 		);
@@ -1093,7 +1095,7 @@ function basic_security_check (req, res, next)
 
 			if (api.startsWith("/marketplace/"))
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 403,
 					"Untrusted Apps cannot call "	+
 					"marketplace APIs"
@@ -1103,7 +1105,7 @@ function basic_security_check (req, res, next)
 
 		if (user_notice["delegated-by"])
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 403,
 					"Delegated certificates cannot"	+
 					" be used to call auth/marketplace APIs"
@@ -1117,11 +1119,11 @@ function basic_security_check (req, res, next)
 			integer_cert_class = parseInt(cert_class,10) || 0;
 
 		if (integer_cert_class < 1)
-			return END_ERROR(res, 403, "Invalid certificate class");
+			return ERROR(res, 403, "Invalid certificate class");
 
 		if (integer_cert_class < min_class_required)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 403,
 					"A class-" + min_class_required	+
 					" or above certificate "	+
@@ -1140,7 +1142,7 @@ function basic_security_check (req, res, next)
 
 			if (! api.endsWith("/certificate-info"))
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 403,
 					"A class-1 certificate is required " +
 					"to call this API"
@@ -1151,13 +1153,13 @@ function basic_security_check (req, res, next)
 		const error = is_secure(req,res,cert,true); // validate emails
 
 		if (error !== "OK")
-			return END_ERROR (res, 403, error);
+			return ERROR (res, 403, error);
 
 		pool.query("SELECT crl FROM crl LIMIT 1", [], (error, results) =>
 		{
 			if (error || results.rows.length === 0)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500,
 					"Internal error!", error
 				);
@@ -1167,7 +1169,7 @@ function basic_security_check (req, res, next)
 
 			if (has_certificate_been_revoked(req.socket,cert,CRL))
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 403,
 					"Certificate has been revoked"
 				);
@@ -1209,7 +1211,7 @@ function basic_security_check (req, res, next)
 							"invalid-input"	: "RegEx no. " + regex_number,
 						};
 
-						return END_ERROR (
+						return ERROR (
 							res, 400,
 								error_response
 						);
@@ -1232,7 +1234,7 @@ function basic_security_check (req, res, next)
 							"invalid-input"	: "RegEx no. " + regex_number,
 						};
 
-						return END_ERROR (
+						return ERROR (
 							res, 400,
 								error_response
 						);
@@ -1262,7 +1264,7 @@ function basic_security_check (req, res, next)
 		const error = is_secure(req,res,cert,false);
 
 		if (error !== "OK")
-			return END_ERROR (res, 403, error);
+			return ERROR (res, 403, error);
 
 		res.locals.cert_class	= 1;
 		res.locals.email	= "";
@@ -1302,7 +1304,7 @@ function basic_security_check (req, res, next)
 
 		if (res.locals.cert_class < min_class_required)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 403,
 				"A class-" + min_class_required	+
 				" or above certificate is"	+
@@ -1329,7 +1331,7 @@ function dns_check (req, res, next)
 		return next();
 
 	if (! cert.subject || ! is_string_safe(cert.subject.CN))
-		return END_ERROR (res, 400, "Invalid 'CN' in the certificate");
+		return ERROR (res, 400, "Invalid 'CN' in the certificate");
 
 	const	ip			= req.connection.remoteAddress;
 	let	ip_matched		= false;
@@ -1356,7 +1358,7 @@ function dns_check (req, res, next)
 				"invalid-input"	: xss_safe(hostname_in_certificate)
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		for (const a of ip_addresses)
@@ -1370,7 +1372,7 @@ function dns_check (req, res, next)
 
 		if (! ip_matched)
 		{
-			return END_ERROR (res, 403,
+			return ERROR (res, 403,
 				"Your certificate's hostname in CN "	+
 				"and your IP does not match!"
 			);
@@ -1397,7 +1399,7 @@ function ocsp_check (req, res, next)
 		}
 		else
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 400,
 				"Something is wrong with your client/browser !"
 			);
@@ -1413,7 +1415,7 @@ function ocsp_check (req, res, next)
 	{
 		if (ocsp_error)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 403,
 				"Your certificate issuer did "	+
 				"NOT respond to an OCSP request"
@@ -1422,7 +1424,7 @@ function ocsp_check (req, res, next)
 
 		if (ocsp_response.type !== "good")
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 403,
 				"Your certificate has been "	+
 				"revoked by your certificate issuer"
@@ -1467,7 +1469,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 	if (! request_array || request_array.length < 1)
 	{
-		return END_ERROR (
+		return ERROR (
 			res, 400,
 				"'request' must be a valid JSON array " +
 				"with at least 1 element"
@@ -1487,7 +1489,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			requested_token_time > MAX_TOKEN_TIME
 		)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 400,
 				"'token-time' should be > 0 and < " +
 				MAX_TOKEN_TIME
@@ -1517,7 +1519,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			", from ip : " + String (req.connection.remoteAddress)
 		);
 
-		return END_ERROR (res, 429, "Too many requests");
+		return ERROR (res, 429, "Too many requests");
 	}
 
 	const ip	= req.connection.remoteAddress;
@@ -1605,7 +1607,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 					"invalid-input"	: xss_safe(r),
 				};
 
-				return END_ERROR (res, 400, error_response);
+				return ERROR (res, 400, error_response);
 			}
 
 			resource = r.id;
@@ -1617,7 +1619,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"invalid-input"	: xss_safe(String(r)),
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		// allow some chars but not ".."
@@ -1629,7 +1631,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"invalid-input"	: xss_safe(resource),
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		if (typeof r.method === "string")
@@ -1648,7 +1650,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				}
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		if (r.api && typeof r.api === "string")
@@ -1670,7 +1672,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				}
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		if ((resource.match(/\//g) || []).length < 3)
@@ -1680,7 +1682,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"invalid-input"	: xss_safe(resource)
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		// if body is given but is not a valid object
@@ -1694,7 +1696,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				}
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		if (can_access_regex)
@@ -1719,7 +1721,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 					}
 				};
 
-				return END_ERROR (res, 403, error_response);
+				return ERROR (res, 403, error_response);
 			}
 		}
 
@@ -1764,7 +1766,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"invalid-input"	: xss_safe(resource)
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		const policy_lowercase = Buffer.from (
@@ -1849,7 +1851,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 					}
 				};
 
-				return END_ERROR (res, 400, error_response);
+				return ERROR (res, 400, error_response);
 			}
 
 			CTX.conditions.api = api;
@@ -1866,7 +1868,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 						}
 					};
 
-					return END_ERROR (res, 400, error_response);
+					return ERROR (res, 400, error_response);
 				}
 
 				CTX.conditions.method = method;
@@ -1898,7 +1900,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 							}
 						};
 
-						return END_ERROR (res, 403, error_response);
+						return ERROR (res, 403, error_response);
 					}
 
 					const cost_per_second		= payment_amount / token_time_in_policy;
@@ -1926,7 +1928,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 						}
 					};
 
-					return END_ERROR (res, 403, error_response);
+					return ERROR (res, 403, error_response);
 				}
 			}
 		}
@@ -1940,7 +1942,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"message" : "token validity is less than 1 second"
 			};
 
-			return END_ERROR (res, 400, error_response);
+			return ERROR (res, 400, error_response);
 		}
 
 		if (requires_manual_authorization)
@@ -1969,9 +1971,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 	}
 
 	if (num_rules_passed < 1 || num_rules_passed < request_array.length)
-		return END_ERROR (res, 403, "Unauthorized!");
-
-	let token;
+		return ERROR (res, 403, "Unauthorized!");
 
 	const random_hex = crypto
 				.randomBytes(TOKEN_LEN)
@@ -1979,12 +1979,12 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 	/* Token format = issued-by / issued-to / random-hex-string */
 
-	token = SERVER_NAME + "/" + consumer_id + "/" + random_hex;
+	const token	= SERVER_NAME + "/" + consumer_id + "/" + random_hex;
 
-	const response = {
+	const response	= {
 
 		"token"			: token,
-		"token-type"		: "DataSetu",
+		"token-type"		: "DATASETU",
 		"expires-in"		: token_time,
 
 		"//"			: "",
@@ -2008,7 +2008,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 	{
 		if (res.locals.untrusted)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 403,
 				"Untrusted Apps cannot get tokens requiring credits"
 			);
@@ -2029,7 +2029,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 		if (total_payment_amount > credits)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 402,
 					"Not enough balance in credits for : "	+
 					total_payment_amount			+
@@ -2115,7 +2115,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 	{
 		if (error || results.rowCount === 0)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 500,
 				"Internal error!", error
 			);
@@ -2141,7 +2141,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			);
 		}
 
-		return END_SUCCESS (res,response);
+		return SUCCESS (res,response);
 	});
 });
 
@@ -2153,10 +2153,10 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 	const hostname_in_certificate	= cert.subject.CN.toLowerCase();
 
 	if (! body.token)
-		return END_ERROR (res, 400, "No 'token' found in the body");
+		return ERROR (res, 400, "No 'token' found in the body");
 
 	if (! is_valid_token(body.token))
-		return END_ERROR (res, 400, "Invalid 'token'");
+		return ERROR (res, 400, "Invalid 'token'");
 
 	const token		= body.token.toLowerCase();
 	let server_token	= body["server-token"] || true;
@@ -2170,7 +2170,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 		server_token = server_token.toLowerCase();
 
 		if (! is_valid_servertoken(server_token, hostname_in_certificate))
-			return END_ERROR (res, 400, "Invalid 'server-token'");
+			return ERROR (res, 400, "Invalid 'server-token'");
 	}
 
 	const consumer_request = body.request;
@@ -2179,7 +2179,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 	{
 		if (! (consumer_request instanceof Array))
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 400,
 				"'request' must be an valid JSON array"
 			);
@@ -2213,13 +2213,13 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 		{
 			if (error)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500, "Internal error!", error
 				);
 			}
 
 			if (results.rows.length === 0)
-				return END_ERROR (res, 403, "Invalid 'token'");
+				return ERROR (res, 403, "Invalid 'token'");
 
 			const expected_server_token = results
 							.rows[0]
@@ -2227,7 +2227,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 
 			// if token doesn't belong to this server
 			if (! expected_server_token)
-				return END_ERROR (res, 403, "Invalid 'token'");
+				return ERROR (res, 403, "Invalid 'token'");
 
 			const num_resource_servers = Object.keys (
 				results.rows[0].server_token
@@ -2237,7 +2237,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 			{
 				if (server_token === true) // should be a real token
 				{
-					return END_ERROR (
+					return ERROR (
 						res, 403,
 						"Invalid 'server-token'"
 					);
@@ -2247,7 +2247,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 
 				if (sha256_of_server_token !== expected_server_token)
 				{
-					return END_ERROR (
+					return ERROR (
 						res, 403,
 						"Invalid 'server-token'"
 					);
@@ -2267,7 +2267,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 
 					if (sha256_of_server_token !== expected_server_token)
 					{
-						return END_ERROR (
+						return ERROR (
 							res, 403,
 							"Invalid 'server-token'"
 						);
@@ -2275,7 +2275,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 				}
 				else
 				{
-					return END_ERROR (
+					return ERROR (
 						res, 500,
 						"Invalid 'expected_server_token' in DB"
 					);
@@ -2309,7 +2309,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 			Object.freeze(request_for_resource_server);
 
 			if (request_for_resource_server.length === 0)
-				return END_ERROR (res, 403, "Invalid 'token'");
+				return ERROR (res, 403, "Invalid 'token'");
 
 			if (consumer_request)
 			{
@@ -2325,7 +2325,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 
 				if (l1 > l2)
 				{
-					return END_ERROR (
+					return ERROR (
 						res, 403, "Unauthorized !"
 					);
 				}
@@ -2339,7 +2339,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 							"invalid-input"	: xss_safe(r1)
 						};
 
-						return END_ERROR (res, 400,
+						return ERROR (res, 400,
 							error_response
 						);
 					}
@@ -2372,7 +2372,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 									"invalid-input"	: xss_safe(r1.id)
 								};
 
-								return END_ERROR (res, 403, error_response);
+								return ERROR (res, 403, error_response);
 							}
 
 							resource_found = true;
@@ -2387,7 +2387,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 							"invalid-input"	: xss_safe(r1.id),
 						};
 
-						return END_ERROR (res, 403, error_response);
+						return ERROR (res, 403, error_response);
 					}
 				}
 			}
@@ -2414,14 +2414,14 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 				{
 					if (update_error)
 					{
-						return END_ERROR (
+						return ERROR (
 							res, 500,
 							"Internal error!",
 							update_error
 						);
 					}
 
-					return END_SUCCESS (res,response);
+					return SUCCESS (res,response);
 				}
 			);
 		}
@@ -2438,7 +2438,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 
 	if (tokens && token_hashes)
 	{
-		return END_ERROR (
+		return ERROR (
 			res, 400,
 			"Provide either 'tokens' or 'token-hashes'; but not both"
 		);
@@ -2446,7 +2446,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 
 	if ( (! tokens) && (! token_hashes))
 	{
-		return END_ERROR (
+		return ERROR (
 			res, 400,
 			"No 'tokens' or 'token-hashes' found"
 		);
@@ -2459,7 +2459,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 		// user is a consumer
 
 		if (! (tokens instanceof Array))
-			return END_ERROR (res, 400, "'tokens' must be a valid JSON array");
+			return ERROR (res, 400, "'tokens' must be a valid JSON array");
 
 		for (const token of tokens)
 		{
@@ -2471,7 +2471,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 					"num-tokens-revoked"	: num_tokens_revoked
 				};
 
-				return END_ERROR (res, 400, error_response);
+				return ERROR (res, 400, error_response);
 			}
 
 			const sha256_of_token = sha256(token);
@@ -2497,7 +2497,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 					"num-tokens-revoked"	: num_tokens_revoked
 				};
 
-				return END_ERROR (res, 400, error_response);
+				return ERROR (res, 400, error_response);
 			}
 
 			pg.querySync (
@@ -2522,7 +2522,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 		// user is a provider
 
 		if (! (token_hashes instanceof Array))
-			return END_ERROR (res, 400, "'token-hashes' must be a valid JSON array");
+			return ERROR (res, 400, "'token-hashes' must be a valid JSON array");
 
 		const email_domain	= id.split("@")[1];
 		const sha1_of_email	= sha1(id);
@@ -2539,7 +2539,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 					"num-tokens-revoked"	: num_tokens_revoked
 				};
 
-				return END_ERROR (res, 400, error_response);
+				return ERROR (res, 400, error_response);
 			}
 
 			const rows = pg.querySync (
@@ -2563,7 +2563,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 					"num-tokens-revoked"	: num_tokens_revoked
 				};
 
-				return END_ERROR (res, 400, error_response);
+				return ERROR (res, 400, error_response);
 			}
 
 			const provider_false = {};
@@ -2592,7 +2592,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 		"num-tokens-revoked" : num_tokens_revoked
 	};
 
-	return END_SUCCESS (res, response);
+	return SUCCESS (res, response);
 });
 
 app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
@@ -2601,23 +2601,23 @@ app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
 	const body		= res.locals.body;
 
 	if (! body.serial)
-		return END_ERROR (res, 400, "No 'serial' found in the body");
+		return ERROR (res, 400, "No 'serial' found in the body");
 
 	if (! is_string_safe(body.serial))
-		return END_ERROR (res, 400, "Invalid 'serial'");
+		return ERROR (res, 400, "Invalid 'serial'");
 
 	const serial = body.serial.toLowerCase();
 
 	if (! body.fingerprint)
 	{
-		return END_ERROR (
+		return ERROR (
 			res, 400,
 			"No 'fingerprint' found in the body"
 		);
 	}
 
 	if (! is_string_safe(body.fingerprint,":")) // fingerprint contains ':'
-		return END_ERROR (res, 400, "Invalid 'fingerprint'");
+		return ERROR (res, 400, "Invalid 'fingerprint'");
 
 	const fingerprint	= body.fingerprint.toLowerCase();
 
@@ -2645,7 +2645,7 @@ app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
 		{
 			if (error)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500, "Internal error!", error
 				);
 			}
@@ -2677,7 +2677,7 @@ app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
 				{
 					if (update_error)
 					{
-						return END_ERROR (
+						return ERROR (
 							res, 500,
 							"Internal error!",
 							update_error
@@ -2686,7 +2686,7 @@ app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
 
 					response["num-tokens-revoked"] += update_results.rowCount;
 
-					return END_SUCCESS (res,response);
+					return SUCCESS (res,response);
 				}
 			);
 		}
@@ -2699,10 +2699,10 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 	const provider_id	= res.locals.email;
 
 	if (! body.policy)
-		return END_ERROR (res, 400, "No 'policy' found in request");
+		return ERROR (res, 400, "No 'policy' found in request");
 
 	if (typeof body.policy !== "string")
-		return END_ERROR (res, 400, "'policy' must be a string");
+		return ERROR (res, 400, "'policy' must be a string");
 
 	const policy		= body.policy.trim();
 	const policy_lowercase	= policy.toLowerCase();
@@ -2712,7 +2712,7 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 		(policy_lowercase.search("::regex") >= 0)
 	)
 	{
-		return END_ERROR (res, 400, "RegEx in 'policy' is not supported");
+		return ERROR (res, 400, "RegEx in 'policy' is not supported");
 	}
 
 	const rules = policy.split(";");
@@ -2730,7 +2730,7 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 	catch (x)
 	{
 		const err = String(x);
-		return END_ERROR (res, 400, "Syntax error in policy. " + err);
+		return ERROR (res, 400, "Syntax error in policy. " + err);
 	}
 
 	const email_domain	= provider_id.split("@")[1];
@@ -2750,7 +2750,7 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		let query;
 		let params;
@@ -2795,14 +2795,14 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 		{
 			if (error_1 || results_1.rowCount === 0)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500,
 						"Internal error!",
 						error_1
 				);
 			}
 
-			return END_SUCCESS (res);
+			return SUCCESS (res);
 		});
 	});
 });
@@ -2813,10 +2813,10 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 	const provider_id	= res.locals.email;
 
 	if (! body.policy)
-		return END_ERROR (res, 400, "No 'policy' found in request");
+		return ERROR (res, 400, "No 'policy' found in request");
 
 	if (typeof body.policy !== "string")
-		return END_ERROR (res, 400, "'policy' must be a string");
+		return ERROR (res, 400, "'policy' must be a string");
 
 	const policy		= body.policy.trim();
 	const policy_lowercase	= policy.toLowerCase();
@@ -2826,7 +2826,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 		(policy_lowercase.search("::regex") >= 0)
 	)
 	{
-		return END_ERROR (res, 400, "RegEx in 'policy' is not supported");
+		return ERROR (res, 400, "RegEx in 'policy' is not supported");
 	}
 
 	const rules = policy.split(";");
@@ -2844,7 +2844,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 	catch (x)
 	{
 		const err = String(x);
-		return END_ERROR (res, 400, "Syntax error in policy. " + err);
+		return ERROR (res, 400, "Syntax error in policy. " + err);
 	}
 
 	const email_domain	= provider_id.split("@")[1];
@@ -2862,7 +2862,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return END_ERROR (res,500,"Internal error!",error);
+			return ERROR (res,500,"Internal error!",error);
 
 		let query;
 		let params;
@@ -2889,7 +2889,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 			{
 				const err = String(x);
 
-				return END_ERROR (
+				return ERROR (
 					res, 400,
 					"Syntax error in policy. " + err
 				);
@@ -2941,14 +2941,14 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 		{
 			if (error_1 || results_1.rowCount === 0)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500,
 						"Internal error!",
 						error_1
 				);
 			}
 
-			return END_SUCCESS (res);
+			return SUCCESS (res);
 		});
 	});
 });
@@ -2975,10 +2975,10 @@ app.post("/auth/v[1-2]/acl", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		if (results.rows.length === 0)
-			return END_ERROR (res, 400, "No policies set yet!");
+			return ERROR (res, 400, "No policies set yet!");
 
 		const policy	= Buffer
 					.from(results.rows[0].policy,"base64")
@@ -3002,7 +3002,7 @@ app.post("/auth/v[1-2]/acl", (req, res) => {
 			"api-called-from"	: results.rows[0].api_called_from
 		};
 
-		return END_SUCCESS (res,response);
+		return SUCCESS (res,response);
 	});
 });
 
@@ -3028,10 +3028,10 @@ app.post("/auth/v[1-2]/acl/revert", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		if (results.rows.length === 0)
-			return END_ERROR (res, 400, "No previous policies found!");
+			return ERROR (res, 400, "No previous policies found!");
 
 		const previous_policy = Buffer
 					.from(results.rows[0].previous_policy,"base64")
@@ -3052,7 +3052,7 @@ app.post("/auth/v[1-2]/acl/revert", (req, res) => {
 		{
 			const err = String(x);
 
-			return END_ERROR (
+			return ERROR (
 				res, 400,
 				"Syntax error in previous-policy. " + err
 			);
@@ -3076,14 +3076,14 @@ app.post("/auth/v[1-2]/acl/revert", (req, res) => {
 		{
 			if (error_1 || results_1.rowCount === 0)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500,
 						"Internal error!",
 						error_1
 				);
 			}
 
-			return END_SUCCESS (res);
+			return SUCCESS (res);
 		});
 	});
 });
@@ -3094,13 +3094,13 @@ app.post("/auth/v[1-2]/audit/tokens", (req, res) => {
 	const body		= res.locals.body;
 
 	if (! body.hours)
-		return END_ERROR (res, 400, "No 'hours' found in the body");
+		return ERROR (res, 400, "No 'hours' found in the body");
 
 	const hours = parseInt (body.hours,10);
 
 	// 5 yrs max
 	if (isNaN(hours) || hours < 1 || hours > 43800) {
-		return END_ERROR (res, 400, "'hours' must be a positive number");
+		return ERROR (res, 400, "'hours' must be a positive number");
 	}
 
 	const as_consumer = [];
@@ -3124,7 +3124,7 @@ app.post("/auth/v[1-2]/audit/tokens", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		for (const row of results.rows)
 		{
@@ -3171,7 +3171,7 @@ app.post("/auth/v[1-2]/audit/tokens", (req, res) => {
 		{
 			if (error)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500, "Internal error!", error
 				);
 			}
@@ -3222,7 +3222,7 @@ app.post("/auth/v[1-2]/audit/tokens", (req, res) => {
 				"as-provider"	: as_provider,
 			};
 
-			return END_SUCCESS (res,response);
+			return SUCCESS (res,response);
 		});
 	});
 });
@@ -3233,30 +3233,30 @@ app.post("/auth/v[1-2]/group/add", (req, res) => {
 	const provider_id	= res.locals.email;
 
 	if (! body.consumer)
-		return END_ERROR (res, 400, "No 'consumer' found in the body");
+		return ERROR (res, 400, "No 'consumer' found in the body");
 
 	if (! is_valid_email(body.consumer))
-		return END_ERROR (res, 400, "'consumer' must be an e-mail");
+		return ERROR (res, 400, "'consumer' must be an e-mail");
 
 	const consumer_id = body.consumer.toLowerCase();
 
 	if (! body.group)
-		return END_ERROR (res, 400, "No 'group' found in the body");
+		return ERROR (res, 400, "No 'group' found in the body");
 
 	if (! is_string_safe (body.group))
-		return END_ERROR (res, 400, "Invalid 'group'");
+		return ERROR (res, 400, "Invalid 'group'");
 
 	const group = body.group.toLowerCase();
 
 	if (! body["valid-till"])
-		return END_ERROR (res, 400, "No 'valid-till' found in the body");
+		return ERROR (res, 400, "No 'valid-till' found in the body");
 
 	const valid_till = parseInt(body["valid-till"],10);
 
 	// 1 year max
 	if (isNaN(valid_till) || valid_till < 1 || valid_till > 8760)
 	{
-		return END_ERROR (
+		return ERROR (
 			res, 400, "'valid-till' must be a positive number"
 		);
 	}
@@ -3280,9 +3280,9 @@ app.post("/auth/v[1-2]/group/add", (req, res) => {
 	(error, results) =>
 	{
 		if (error || results.rowCount === 0)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
-		return END_SUCCESS (res);
+		return SUCCESS (res);
 	});
 });
 
@@ -3294,7 +3294,7 @@ app.post("/auth/v[1-2]/group/list", (req, res) => {
 	if (body.group)
 	{
 		if (! is_string_safe (body.group))
-			return END_ERROR (res, 400, "Invalid 'group'");
+			return ERROR (res, 400, "Invalid 'group'");
 	}
 
 	const group		= body.group ? body.group.toLowerCase() : null;
@@ -3323,7 +3323,7 @@ app.post("/auth/v[1-2]/group/list", (req, res) => {
 		{
 			if (error)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500, "Internal error!", error
 				);
 			}
@@ -3336,7 +3336,7 @@ app.post("/auth/v[1-2]/group/list", (req, res) => {
 				});
 			}
 
-			return END_SUCCESS (res,response);
+			return SUCCESS (res,response);
 		});
 	}
 	else
@@ -3355,7 +3355,7 @@ app.post("/auth/v[1-2]/group/list", (req, res) => {
 		{
 			if (error)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500, "Internal error!", error
 				);
 			}
@@ -3369,7 +3369,7 @@ app.post("/auth/v[1-2]/group/list", (req, res) => {
 				});
 			}
 
-			return END_SUCCESS (res,response);
+			return SUCCESS (res,response);
 		});
 	}
 });
@@ -3380,13 +3380,13 @@ app.post("/auth/v[1-2]/group/delete", (req, res) => {
 	const provider_id	= res.locals.email;
 
 	if (! body.consumer)
-		return END_ERROR (res, 400, "No 'consumer' found in the body");
+		return ERROR (res, 400, "No 'consumer' found in the body");
 
 	if (body.consumer !== "*")
 	{
 		if (! is_valid_email(body.consumer))
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 400, "'consumer' must be an e-mail"
 			);
 		}
@@ -3395,10 +3395,10 @@ app.post("/auth/v[1-2]/group/delete", (req, res) => {
 	const consumer_id = body.consumer.toLowerCase();
 
 	if (! body.group)
-		return END_ERROR (res, 400, "No 'group' found in the body");
+		return ERROR (res, 400, "No 'group' found in the body");
 
 	if (! is_string_safe (body.group))
-		return END_ERROR (res, 400, "Invalid 'group'");
+		return ERROR (res, 400, "Invalid 'group'");
 
 	const group		= body.group.toLowerCase();
 
@@ -3427,11 +3427,11 @@ app.post("/auth/v[1-2]/group/delete", (req, res) => {
 	pool.query (query, params, (error, results) =>
 	{
 		if (error)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		if (consumer_id !== "*" && results.rowCount === 0)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 400, "Consumer not found in the group"
 			);
 		}
@@ -3440,7 +3440,7 @@ app.post("/auth/v[1-2]/group/delete", (req, res) => {
 			"num-consumers-deleted"	: results.rowCount
 		};
 
-		return END_SUCCESS (res,response);
+		return SUCCESS (res,response);
 	});
 });
 
@@ -3455,7 +3455,7 @@ app.post("/auth/v[1-2]/certificate-info", (req, res) => {
 		"fingerprint"		: cert.fingerprint.toLowerCase(),
 	};
 
-	return END_SUCCESS (res,response);
+	return SUCCESS (res,response);
 });
 
 /* --- Marketplace APIs --- */
@@ -3493,10 +3493,10 @@ app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		if (results.rowCount === 0)
-			return END_ERROR (res, 400, "No credits available");
+			return ERROR (res, 400, "No credits available");
 
 		const response = {};
 
@@ -3505,14 +3505,14 @@ app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
 			response.credits 		= results.rows[0].amount;
 			response["last-updated"]	= results.rows[0].last_updated;
 
-			return END_SUCCESS (res, response);
+			return SUCCESS (res, response);
 		}
 
 		pool.query ("SELECT * FROM credit WHERE id = $1::text", [id],
 		(other_error, other_results) =>
 		{
 			if (other_error)
-				return END_ERROR (res, 500, "Internal error!", other_error);
+				return ERROR (res, 500, "Internal error!", other_error);
 
 			response["other-credits"] = [];
 
@@ -3534,7 +3534,7 @@ app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
 				}
 			}
 
-			return END_SUCCESS (res, response);
+			return SUCCESS (res, response);
 		});
 	});
 });
@@ -3547,12 +3547,12 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 	const cert_class	= res.locals.cert_class;
 
 	if (! body.amount)
-		return END_ERROR (res, 400, "No 'amount' found in the body");
+		return ERROR (res, 400, "No 'amount' found in the body");
 
 	const amount = parseFloat(body.amount);
 
 	if (isNaN(amount) || amount < 0 || amount > 1000)
-		return END_ERROR (res, 400, "'amount' must be a positive number <= 1000");
+		return ERROR (res, 400, "'amount' must be a positive number <= 1000");
 
 	let serial;
 	let fingerprint;
@@ -3561,7 +3561,7 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 	{
 		if (body.fingerprint || body.serial)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 400,
 				"'fingerprint' or 'serial' can only be"	+
 				" provided when using a class-3 "	+
@@ -3588,10 +3588,10 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 		if (body.serial && body.fingerprint)
 		{
 			if (! is_string_safe(body.serial))
-				return END_ERROR (res, 400, "Invalid 'serial'");
+				return ERROR (res, 400, "Invalid 'serial'");
 
 			if (! is_string_safe(body.fingerprint,":")) // fingerprint contains ':'
-				return END_ERROR (res, 400, "Invalid 'fingerprint'");
+				return ERROR (res, 400, "Invalid 'fingerprint'");
 
 			serial		= body.serial.toLowerCase();
 			fingerprint	= body.fingerprint.toLowerCase();
@@ -3637,14 +3637,14 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 
 		if (error)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 500, "Payment failed", error
 			);
 		}
 
 		if (response.statusCode !== 200)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 500,
 				"Payment failed. Invalid status from RazorPay",
 				response
@@ -3653,7 +3653,7 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 
 		if (! body.short_url)
 		{
-			return END_ERROR (
+			return ERROR (
 				res, 500,
 				"Payment failed. RazorPay did send payment url",
 				body
@@ -3688,12 +3688,12 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 		{
 			if (insert_error || insert_results.rowCount === 0)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500, "Internal error!", insert_error
 				);
 			}
 
-			return END_SUCCESS (res, link);
+			return SUCCESS (res, link);
 		});
 	});
 });
@@ -3742,9 +3742,9 @@ app.get("/marketplace/topup-success", (req, res) => {
 	].join("|");
 
 	const expected_signature = crypto
-					.createHmac('sha256',rzpay_key_secret)
+					.createHmac("sha256",rzpay_key_secret)
 					.update(payload)
-					.digest('hex');
+					.digest("hex");
 
 	if (req.query.razorpay_signature !== expected_signature)
 	{
@@ -3888,10 +3888,10 @@ app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
 	const cert_class	= res.locals.cert_class;
 
 	if (! body.token)
-		return END_ERROR (res, 400, "No 'token' found in the body");
+		return ERROR (res, 400, "No 'token' found in the body");
 
 	if (! is_valid_token(body.token,id))
-		return END_ERROR (res, 400, "Invalid 'token'");
+		return ERROR (res, 400, "Invalid 'token'");
 
 	const token		= body.token;
 	const sha256_of_token	= sha256(token);
@@ -3921,7 +3921,7 @@ app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
 		{
 
 			if (results.rowCount === 0)
-				return END_ERROR (res, 400, "Invalid 'token'");
+				return ERROR (res, 400, "Invalid 'token'");
 
 			const amount	= results.rows[0].amount;
 
@@ -3962,15 +3962,15 @@ app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
 			pool.query(query, params, (function_error, function_results) =>
 			{
 				if (function_error)
-					return END_ERROR (res, 500, "Internal error!", function_error);
+					return ERROR (res, 500, "Internal error!", function_error);
 
 				if (function_results.rowCount === 0)
-					return END_ERROR (res, 402, "Not enough balance!");
+					return ERROR (res, 402, "Not enough balance!");
 
 				if (! function_results.rows[0].payment_confirmed)
-					return END_ERROR (res, 400, "Payment could not be confirmed");
+					return ERROR (res, 400, "Payment could not be confirmed");
 
-				return END_SUCCESS (res);
+				return SUCCESS (res);
 			});
 		}
 	);
@@ -3984,13 +3984,13 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 	const cert_class	= res.locals.cert_class;
 
 	if (! body.hours)
-		return END_ERROR (res, 400, "No 'hours' found in the body");
+		return ERROR (res, 400, "No 'hours' found in the body");
 
 	const hours = parseInt (body.hours,10);
 
 	// 5 yrs max
 	if (isNaN(hours) || hours < 1 || hours > 43800) {
-		return END_ERROR (res, 400, "'hours' must be a positive number");
+		return ERROR (res, 400, "'hours' must be a positive number");
 	}
 
 	let serial;
@@ -4025,7 +4025,7 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return END_ERROR (res, 500, "Internal error!", error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		const as_consumer		= [];
 		const as_provider		= [];
@@ -4047,7 +4047,7 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 				"as-consumer" : as_consumer
 			};
 
-			return END_SUCCESS (res, response);
+			return SUCCESS (res, response);
 		}
 
 		pool.query (
@@ -4065,7 +4065,7 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 		(error_1, results_1) =>
 		{
 			if (error_1)
-				return END_ERROR (res, 500, "Internal error!", error_1);
+				return ERROR (res, 500, "Internal error!", error_1);
 
 			for (const row of results_1.rows)
 			{
@@ -4097,7 +4097,7 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 			(error_2, results_2) =>
 			{
 				if (error_2)
-					return END_ERROR (res, 500, "Internal error!", error_2);
+					return ERROR (res, 500, "Internal error!", error_2);
 
 				for (const row of results_2.rows)
 				{
@@ -4114,7 +4114,7 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 					"other-transactions"	: other_transactions
 				};
 
-				return END_SUCCESS(res, response);
+				return SUCCESS(res, response);
 			});
 		});
 	});
@@ -4126,39 +4126,39 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 	const body    	= res.locals.body;
 
 	if (! body["from-fingerprint"])
-		return END_ERROR (res, 400, "'from-fingerprint' field not found in body");
+		return ERROR (res, 400, "'from-fingerprint' field not found in body");
 
 	if (! is_string_safe(body["from-fingerprint"],":"))
-		return END_ERROR (res, 400, "Invalid 'from-fingerprint'");
+		return ERROR (res, 400, "Invalid 'from-fingerprint'");
 
 	const from_fingerprint = body["from-fingerprint"];
 
 	if (! body["to-fingerprint"])
-		return END_ERROR (res, 400, "'to-fingerprint' field not found in body");
+		return ERROR (res, 400, "'to-fingerprint' field not found in body");
 
 	if (! is_string_safe(body["to-fingerprint"],":"))
-		return END_ERROR (res, 400, "Invalid 'to-fingerprint'");
+		return ERROR (res, 400, "Invalid 'to-fingerprint'");
 
 	const to_fingerprint = body["to-fingerprint"];
 
 	if (from_fingerprint === to_fingerprint)
-		return END_ERROR (res, 400, "'from-fingerprint' and 'to-fingerprint' cannot be same");
+		return ERROR (res, 400, "'from-fingerprint' and 'to-fingerprint' cannot be same");
 
 	if (! body["to-serial"])
-		return END_ERROR (res, 400, "'to-serial' field not found in body");
+		return ERROR (res, 400, "'to-serial' field not found in body");
 
 	if (! is_string_safe(body["to-serial"]))
-		return END_ERROR (res, 400, "Invalid 'to-serial'");
+		return ERROR (res, 400, "Invalid 'to-serial'");
 
 	const to_serial = body.to["to-serial"];
 
 	if (! body.amount)
-		return END_ERROR (res, 400, "'amount' field not found in body");
+		return ERROR (res, 400, "'amount' field not found in body");
 
 	const amount = parseFloat(body.amount, 10);
 
 	if (isNaN(amount) || amount < 0 || amount > 1000)
-		return END_ERROR (res, 400, "'amount' is not a valid number");
+		return ERROR (res, 400, "'amount' is not a valid number");
 
 	pool.query (
 
@@ -4175,7 +4175,7 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 		{
 			if (error)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 500,
 					"Internal error!", error
 				);
@@ -4183,7 +4183,7 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 
 			if (results.rowCount === 0)
 			{
-				return END_ERROR (
+				return ERROR (
 					res, 400,
 					"Not enough balance in 'from-fingerprint'"
 				);
@@ -4208,7 +4208,7 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 			{
 				if (error_1 || results_1.rowCount === 0)
 				{
-					return END_ERROR (
+					return ERROR (
 						res, 500,
 						"Internal error!", error_1
 					);
@@ -4216,13 +4216,13 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 
 				if (! results_1.credits_transfered)
 				{
-					return END_ERROR (
+					return ERROR (
 						res, 400,
 						"Could not transfer credits"
 					);
 				}
 
-				return END_SUCCESS (res);
+				return SUCCESS (res);
 			});
 		}
 	);
@@ -4236,7 +4236,7 @@ app.all("/*", (req, res) => {
 
 	if (req.method === "POST")
 	{
-		return END_ERROR (res, 404, "No such API." + doc );
+		return ERROR (res, 404, "No such API." + doc );
 	}
 	else if (req.method === "GET")
 	{
@@ -4245,14 +4245,14 @@ app.all("/*", (req, res) => {
 			const path = req.url.split("?")[0];
 
 			if (MIN_CERT_CLASS_REQUIRED[path])
-				return END_ERROR (res, 405, "Method must be POST." + doc);
+				return ERROR (res, 405, "Method must be POST." + doc);
 			else
-				return END_ERROR (res, 404, "Page not found." + doc);
+				return ERROR (res, 404, "Page not found." + doc);
 		}
 	}
 	else
 	{
-		return END_ERROR (res, 405, "Method must be POST." + doc);
+		return ERROR (res, 405, "Method must be POST." + doc);
 	}
 });
 
@@ -4306,6 +4306,8 @@ function drop_worker_privileges()
 		unveil(__dirname + "/node-aperture",	"r" );
 
 		unveil();
+
+		pledge.init ("error stdio tty prot_exec inet rpath dns recvfd");
 	}
 	else
 	{
@@ -4316,9 +4318,6 @@ function drop_worker_privileges()
 			process.chdir ("/");
 		}
 	}
-
-	if (is_openbsd)
-		pledge.init ("error stdio tty prot_exec inet rpath dns recvfd");
 
 	assert (has_started_serving_apis === false);
 }
@@ -4341,7 +4340,7 @@ if (cluster.isMaster)
 
 	log("yellow","Master started with pid " + process.pid);
 
-	const ALL_END_POINTS	= Object.keys(MIN_CERT_CLASS_REQUIRED).sort();
+	const ALL_END_POINTS = Object.keys(MIN_CERT_CLASS_REQUIRED).sort();
 
 	for (const e of ALL_END_POINTS)
 		statistics.api.count[e] = 0;
@@ -4352,15 +4351,18 @@ if (cluster.isMaster)
 		cluster.fork();
 	}
 
-	cluster.on ("fork", (worker) => {
-		worker.on ("message", (endpoint) => {
+	if (LAUNCH_ADMIN_PANEL)
+	{
+		cluster.on ("fork", (worker) => {
+			worker.on ("message", (endpoint) => {
 
-			if (ALL_END_POINTS.indexOf(endpoint) === -1)
-				endpoint = "invalid-api";
+				if (ALL_END_POINTS.indexOf(endpoint) === -1)
+					endpoint = "invalid-api";
 
-			statistics.api.count[endpoint] += 1;
+				statistics.api.count[endpoint] += 1;
+			});
 		});
-	});
+	}
 
 	cluster.on ("exit", (worker) => {
 
@@ -4369,10 +4371,15 @@ if (cluster.isMaster)
 		cluster.fork();
 	});
 
-	const stats_app = express();
+	let stats_app; 
 
-	stats_app.use(compression());
-	stats_app.use(bodyParser.raw({type:"*/*"}));
+	if (LAUNCH_ADMIN_PANEL)
+	{
+		stats_app = express();
+
+		stats_app.use(compression());
+		stats_app.use(bodyParser.raw({type:"*/*"}));
+	}
 
 	if (is_openbsd) // drop "rpath"
 	{
@@ -4382,9 +4389,11 @@ if (cluster.isMaster)
 		);
 	}
 
-	https.createServer(https_options,stats_app).listen(8443,"127.0.0.1");
-
-	stats_app.all("/*",show_statistics);
+	if (LAUNCH_ADMIN_PANEL)
+	{
+		https.createServer(https_options,stats_app).listen(8443,"127.0.0.1");
+		stats_app.all("/*",show_statistics);
+	}
 }
 else
 {
