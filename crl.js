@@ -68,7 +68,7 @@ function update_crl (body)
 	catch (x)
 	{
 		const err = String(x).replace(/\n/g," ");
-		log("red","IUDX CA did not return a valid JSON : " + err);
+		log("red","DataSetu CA did not return a valid JSON : " + err);
 		return;
 	}
 
