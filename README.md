@@ -17,7 +17,7 @@ Please see [OpenBSD FAQ - Installation Guide](https://www.openbsd.org/faq/faq4.h
 After installing OpenBSD, please run the command as root:
 
 ```bash
-ftp -o - https://datasetu.org.in/install/auth | sh
+ftp -o - https://raw.githubusercontent.com/datasetu/datasetu-auth-server/master/install | sh
 ```
 
 This will install the Auth server at `/home/datasetu-auth-server/`.
@@ -99,8 +99,8 @@ Below is the list of tables used. There are no join queries in the project.
 |   |-- run			// runs the test
 |   |-- test-groups.py		// test cases for group based access control
 |   `-- test-tokens.py		// general test cases
-|-- download-website.sh		// clones the auth.datasetu.org.in website
-|-- auth.datasetu.org.in		// website of auth.datasetu.org.in
+|-- download-website.sh		// clones the auth.datasetu.org website
+|-- auth.datasetu.org		// website of auth.datasetu.org
 |   |-- acl-append.txt
 |   |-- acl-set.txt
 |   |-- acl.txt
