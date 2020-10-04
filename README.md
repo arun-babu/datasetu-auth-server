@@ -1,12 +1,12 @@
 # DataSetu Authentication, Authorization, and Accounting (AAA) Server
-![ISC license](https://img.shields.io/badge/license-ISC-blue.svg) [![builds.sr.ht status](https://builds.sr.ht/~datasetu-auth.svg)](https://builds.sr.ht/~datasetu-auth?) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6e6d74bd17a146c1a8288c4d98ca3e26)](https://www.codacy.com/gh/datasetu/datasetu-auth-server?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=datasetu/datasetu-auth-server&amp;utm_campaign=Badge_Grade) [![CodeFactor](https://www.codefactor.io/repository/github/datasetu/datasetu-auth-server/badge)](https://www.codefactor.io/repository/github/datasetu/datasetu-auth-server) [![Known Vulnerabilities](https://snyk.io/test/github/datasetu/datasetu-auth-server/badge.svg?targetFile=package.json)](https://snyk.io/test/github/datasetu/datasetu-auth-server?targetFile=package.json)
+![ISC license](https://img.shields.io/badge/license-ISC-blue.svg) [![builds.sr.ht status](https://builds.sr.ht/~datasetu.svg)](https://builds.sr.ht/~datasetu-auth?) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6e6d74bd17a146c1a8288c4d98ca3e26)](https://www.codacy.com/gh/datasetu/datasetu-auth-server?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=datasetu/datasetu-auth-server&amp;utm_campaign=Badge_Grade) [![CodeFactor](https://www.codefactor.io/repository/github/datasetu/datasetu-auth-server/badge)](https://www.codefactor.io/repository/github/datasetu/datasetu-auth-server) [![Known Vulnerabilities](https://snyk.io/test/github/datasetu/datasetu-auth-server/badge.svg?targetFile=package.json)](https://snyk.io/test/github/datasetu/datasetu-auth-server?targetFile=package.json)
 
 [![dependencies Status](https://david-dm.org/datasetu/datasetu-auth-server/status.svg)](https://david-dm.org/datasetu/datasetu-auth-server) [![devDependencies Status](https://david-dm.org/datasetu/datasetu-auth-server/dev-status.svg)](https://david-dm.org/datasetu/datasetu-auth-server?type=dev)
 
 DataSetu-AAA is the Authentication, Authorization, and Accounting server for accessing [DataSetu](https://datasetu.org) services.
 
 ## 1. Read the API documentation
-Please visit [DataSetu Auth server](http://auth.datasetu.org) for APIs and flows.
+Please visit [DataSetu Auth server](http://datasetu.github.io/auth) for APIs and flows.
 
 ## 2. Installation
 ### 2.1 Install OpenBSD 6.7 (prerequisite)
@@ -99,23 +99,5 @@ Below is the list of tables used. There are no join queries in the project.
 |   |-- run			// runs the test
 |   |-- test-groups.py		// test cases for group based access control
 |   `-- test-tokens.py		// general test cases
-|-- download-website.sh		// clones the auth.datasetu.org website
-|-- auth.datasetu.org		// website of auth.datasetu.org
-|   |-- acl-append.txt
-|   |-- acl-set.txt
-|   |-- acl.txt
-|   |-- audit-tokens.txt
-|   |-- ca-list.txt
-|   |-- certificate-info.txt
-|   |-- consumer.svg
-|   |-- group-add.txt
-|   |-- group-delete.txt
-|   |-- group-list.txt
-|   |-- datasetu.png
-|   |-- setup.svg
-|   |-- token-introspect.txt
-|   |-- token-revoke-all.txt
-|   |-- token-revoke.txt
-|   `-- token.txt
 `---'
 ```
