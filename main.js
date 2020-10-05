@@ -2130,7 +2130,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 			const provider_id_hash	= email_domain + "/" + sha1_of_email;
 
-			const telegram_id = m["manual-auth"].split("telegram:")[1];
+			const telegram_id = m["manual-authorization"].split("telegram:")[1];
 
 			send_telegram_to_provider (
 				consumer_id,
