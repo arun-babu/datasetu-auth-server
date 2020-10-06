@@ -25,8 +25,12 @@
 
 const fs			= require("fs");
 const os			= require("os");
+const Pool			= require("pg").Pool;
 const chroot			= require("chroot");
 const Slimbot			= require('slimbot');
+
+const pgNativeClient		= require("pg-native");
+const pg			= new pgNativeClient();
 
 const telegram_apikey		= fs.readFileSync ("telegram.apikey","ascii").trim();
 const slimbot			= new Slimbot(telegram_apikey);
@@ -35,6 +39,36 @@ const EUID			= process.geteuid();
 const is_openbsd		= os.type() === "OpenBSD";
 const pledge			= is_openbsd ? require("node-pledge")	: null;
 const unveil			= is_openbsd ? require("openbsd-unveil"): null;
+
+/* --- postgres --- */
+
+const DB_SERVER	= "127.0.0.1";
+
+const password	= {
+	"DB"	: fs.readFileSync("passwords/bot.db.password","ascii").trim(),
+};
+
+// async postgres connection
+const pool = new Pool ({
+	host		: DB_SERVER,
+	port		: 5432,
+	user		: "bot",
+	database	: "postgres",
+	password	: password.DB,
+});
+
+pool.connect();
+
+// sync postgres connection
+pg.connectSync (
+	"postgresql://bot:"+ password.DB + "@" + DB_SERVER + ":5432/postgres",
+		(err) =>
+		{
+			if (err) {
+				throw err;
+			}
+		}
+);
 
 if (is_openbsd)
 {
@@ -63,7 +97,97 @@ else
 }
 
 slimbot.on('message', message => {
-	slimbot.sendMessage(message.chat.id, 'Message received');
+
+	// update chat id for this user ....
+
+	const user = message.from.username || message.chat.username;
+
+	const rows = pg.querySync (
+		"SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [user]
+	);
+
+	if (rows.length === 0) // user does not exist
+	{
+		pg.querySync (
+			"INSERT INTO telegram VALUES($1::text,$2::text)",
+			[
+				user,
+				message.chat.id	
+			]
+		);
+	}
+	else
+	{
+		pg.querySync (
+			"UPDATE telegram SET chat_id = $1::text WHERE telegram_id = $2::text",
+			[
+				message.chat.id,
+				user
+			]
+		);
+	}
+
+	if (message.text === "/start")
+		return slimbot.sendMessage(message.chat.id, "Hi, I am DataSetu bot");
+	else
+	{
+		/* banner # array index # sha256 hash of token # rest of the message */
+
+		const split = message.text.split("#");
+
+		if (split.length < 4)
+			return slimbot.sendMessage(message.chat.id, "Invalid input");
+
+		const index	= split[1];
+		const token	= split[2];
+
+		pool.query (
+			"SELECT 1 FROM token"			+
+				" WHERE token = $1::text"	+
+				" AND revoked = false"		+
+				" AND expiry > NOW()",
+				[
+					token,			// 1
+				],
+			(error, results) =>
+			{
+				if (error)
+					return slimbot.sendMessage(message.chat.id, "Internal error!");
+
+				if (results.rowCount === 0)
+					return slimbot.sendMessage(message.chat.id, "Invalid input!");
+
+				// append the approved item from "manual_authorization_array" to "request"
+
+				pool.query (
+					"UPDATE token SET"							+
+						"request = request || "						+ 
+						" json_build_array(manual_authorization_array->>$1::int)"	+
+						" WHERE token = $2::text"					+
+						" AND manual_authorization_array->>$1::int IS NOT NULL",
+						[
+							index,
+							token
+						],
+					(update_error, update_results) =>
+					{
+						if (update_error)
+							return slimbot.sendMessage(message.chat.id, "Internal error!");
+
+						if (update_results.rowCount === 0)
+							return slimbot.sendMessage(message.chat.id, "Invalid input!");
+
+						return slimbot.sendMessage(message.chat.id, "Access granted");
+
+						// TODO remove the approved item from "manual_authorization_array"
+						// manual_authorization_array = manual_authorization_array::jsonb - index;
+					}
+				);
+			}
+		);
+
+		console.log(message.text);
+	}
 });
 
 // Call API

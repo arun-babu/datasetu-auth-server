@@ -25,6 +25,7 @@ rcctl enable postgresql
 rm -rf passwords
 mkdir passwords
 
+touch passwords/bot.db.password
 touch passwords/auth.db.password
 touch passwords/admin.db.password
 

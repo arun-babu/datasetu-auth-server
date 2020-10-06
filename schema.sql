@@ -355,6 +355,7 @@ ALTER TABLE public.telegram		OWNER TO postgres;
 ALTER FUNCTION public.update_credit	OWNER TO postgres;
 
 CREATE USER auth		with PASSWORD 'XXX_auth';
+CREATE USER bot			with PASSWORD 'XXX_bot';
 CREATE USER update_crl		with PASSWORD 'XXX_update_crl';
 
 GRANT SELECT			ON TABLE public.crl				TO auth;
@@ -364,6 +365,9 @@ GRANT SELECT,INSERT,UPDATE	ON TABLE public.policy				TO auth;
 GRANT SELECT,INSERT,UPDATE	ON TABLE public.credit				TO auth;
 GRANT SELECT,INSERT,UPDATE	ON TABLE public.topup_transaction		TO auth;
 GRANT SELECT,INSERT,UPDATE	ON TABLE public.telegram			TO auth;
+
+GRANT SELECT,UPDATE		ON TABLE public.token				TO bot;
+GRANT SELECT,INSERT,UPDATE	ON TABLE public.telegram			TO bot;
 
 GRANT UPDATE			ON TABLE public.crl				TO update_crl;
 

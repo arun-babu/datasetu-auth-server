@@ -44,8 +44,8 @@ const geoip_lite		= require("geoip-lite");
 const bodyParser		= require("body-parser");
 const compression		= require("compression");
 const http_request		= require("request");
-const pgNativeClient		= require("pg-native");
 
+const pgNativeClient		= require("pg-native");
 const pg			= new pgNativeClient();
 
 const TOKEN_LEN			= 16;
@@ -434,7 +434,7 @@ function base64 (string)
 		.toString("base64");
 }
 
-function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token_hash, request)
+function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token_hash, request, index)
 {
 	pool.query ("SELECT chat_id FROM telegram WHERE id = $1::text LIMIT 1", [telegram_id], (error,results) =>
 	{
@@ -453,7 +453,8 @@ function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token
 				form		: {
 					chat_id		: results.rows[0].chat_id,
 
-					text		: '[ DataSetu-AUTH ] #' + token_hash  + '#\n\n"'		+
+					text		: '[ DataSetu Auth Server ] #' + index + '#'		+
+								token_hash  + '#\n\n"'				+
 									consumer_id				+
 								'" wants to access "'				+
 									resource + '"\n\n'			+
@@ -2121,23 +2122,25 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			);
 		}
 
-		for (const m of manual_authorization_array)
+		for (let i = 0; i < manual_authorization_array.length; ++i)
 		{
-			const split		= m.id.split("/");
+			const split		= manual_authorization_array[i].id.split("/");
 
 			const email_domain	= split[0].toLowerCase();
 			const sha1_of_email	= split[1].toLowerCase();
 
 			const provider_id_hash	= email_domain + "/" + sha1_of_email;
 
-			const telegram_id = m["manual-authorization"].split("telegram:")[1];
+			const telegram_id = manual_authorization_array[i]["manual-authorization"]
+						.split("telegram:")[1];
 
 			send_telegram_to_provider (
 				consumer_id,
 				provider_id_hash,
 				telegram_id,
 				sha256_of_token,
-				m
+				manual_authorization_array[i],
+				i
 			);
 		}
 
