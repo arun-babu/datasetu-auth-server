@@ -96,7 +96,7 @@ else
 	}
 }
 
-slimbot.on('message', message => {
+slimbot.on('message', (message) => {
 
 	// update chat id for this user ....
 
@@ -129,11 +129,18 @@ slimbot.on('message', message => {
 
 	if (message.text === "/start")
 		return slimbot.sendMessage(message.chat.id, "Hi, I am DataSetu bot");
-	else
+});
+
+slimbot.on('callback_query', (message) => {
+
+	if (message.data === "DENY")
+		return slimbot.sendMessage(message.chat.id, "Access denied!");
+
+	if (message.data === "ALLOW")
 	{
 		/* banner # array index # sha256 hash of token # rest of the message */
 
-		const split = message.text.split("#");
+		const split = message.message.text.split("#");
 
 		if (split.length < 4)
 			return slimbot.sendMessage(message.chat.id, "Invalid input");
@@ -185,11 +192,7 @@ slimbot.on('message', message => {
 				);
 			}
 		);
-
-		console.log(message.text);
 	}
 });
-
-// Call API
 
 slimbot.startPolling();

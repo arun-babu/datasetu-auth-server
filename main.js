@@ -436,7 +436,7 @@ function base64 (string)
 
 function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token_hash, request, index)
 {
-	pool.query ("SELECT chat_id FROM telegram WHERE id = $1::text LIMIT 1", [telegram_id], (error,results) =>
+	pool.query ("SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [telegram_id], (error,results) =>
 	{
 		if (error)
 			send_telegram ("Failed to get chat_id for : " + telegram_id + " : provider " + provider_id);
