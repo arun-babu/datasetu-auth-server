@@ -442,6 +442,12 @@ function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token
 			send_telegram ("Failed to get chat_id for : " + telegram_id + " : provider " + provider_id);
 		else
 		{
+			if (results.rows.length === 0)
+			{
+				send_telegram ("No chat id for : " + telegram_id + " : provider " + provider_id);
+				return;
+			}
+
 			const url		= TELEGRAM + "/bot" + telegram_apikey + "/sendMessage";
 
 			const split		= request.id.split("/");
@@ -465,11 +471,11 @@ function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token
 						inline_keyboard	: [[
 							{
 								text		: "\u2714\ufe0f Allow",
-								callback_data	: "allow"
+								callback_data	: "ALLOW"
 							},
 							{
 								text		: "\u2716\ufe0f Deny",
-								callback_data	: "deny"
+								callback_data	: "DENY"
 							}
 						]]
 					})
