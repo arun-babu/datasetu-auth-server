@@ -17,7 +17,7 @@ Please see [OpenBSD FAQ - Installation Guide](https://www.openbsd.org/faq/faq4.h
 After installing OpenBSD, please run the command as root:
 
 ```bash
-ftp -o - https://raw.githubusercontent.com/datasetu/datasetu-auth-server/master/install | sh
+ftp -o - https://datasetu.org/install/auth | sh
 ```
 
 This will install the Auth server at `/home/datasetu-auth-server/`.
