@@ -131,38 +131,53 @@ slimbot.on('message', (message) => {
 		return slimbot.sendMessage(message.chat.id, "Hi, I am DataSetu bot");
 });
 
-slimbot.on('callback_query', (message) => {
+slimbot.on('callback_query', (query) => {
 
-	if (message.data === "DENY")
-		return slimbot.sendMessage(message.chat.id, "Access denied!");
+	const user = query.from.username || query.chat.username;
 
-	if (message.data === "ALLOW")
+	if (query.data === "DENY")
+	{
+		// TODO delete from DB ?
+		return slimbot.sendMessage(query.chat.id, "Access denied to the user");
+	}
+
+	if (query.data === "ALLOW")
 	{
 		/* banner # array index # sha256 hash of token # rest of the message */
 
-		const split = message.message.text.split("#");
+		const split = query.message.text.split("#");
 
 		if (split.length < 4)
-			return slimbot.sendMessage(message.chat.id, "Invalid input");
+			return slimbot.sendMessage(query.chat.id, "Invalid input");
 
 		const index	= split[1];
 		const token	= split[2];
 
 		pool.query (
-			"SELECT 1 FROM token"			+
+			"SELECT manual_authorization_array"	+
+				" FROM token"			+
 				" WHERE token = $1::text"	+
 				" AND revoked = false"		+
-				" AND expiry > NOW()",
+				" AND expiry > NOW()"		+
+				" LIMIT 1",
 				[
 					token,			// 1
 				],
 			(error, results) =>
 			{
 				if (error)
-					return slimbot.sendMessage(message.chat.id, "Internal error!");
+					return slimbot.sendMessage(query.chat.id, "Internal error!");
 
 				if (results.rowCount === 0)
-					return slimbot.sendMessage(message.chat.id, "Invalid input!");
+					return slimbot.sendMessage(query.chat.id, "Invalid input!");
+
+				const expected_user = results[0].manual_authorization_array["manual-authorization"];
+
+				if ("telegram:" + user !== expected_user)
+				{
+					// TODO serious security issue ?
+					return slimbot.sendMessage(query.chat.id, "Invalid user!");
+				}
 
 				// append the approved item from "manual_authorization_array" to "request"
 
@@ -179,12 +194,12 @@ slimbot.on('callback_query', (message) => {
 					(update_error, update_results) =>
 					{
 						if (update_error)
-							return slimbot.sendMessage(message.chat.id, "Internal error!");
+							return slimbot.sendMessage(query.chat.id, "Internal error!");
 
 						if (update_results.rowCount === 0)
-							return slimbot.sendMessage(message.chat.id, "Invalid input!");
+							return slimbot.sendMessage(query.chat.id, "Invalid input!");
 
-						return slimbot.sendMessage(message.chat.id, "Access granted");
+						return slimbot.sendMessage(query.chat.id, "Access granted to the user");
 
 						// TODO remove the approved item from "manual_authorization_array"
 						// manual_authorization_array = manual_authorization_array::jsonb - index;
