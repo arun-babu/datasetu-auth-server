@@ -2386,13 +2386,17 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 
 					let resource_found = false;
 
+					const one = JSON.parse(r1); 
+
 					for (const r2 of request_for_resource_server)
 					{
 						Object.freeze(r2);
 
 						if (r1.id === r2.id)
 						{
-							if (! lodash.isEqual(r1,r2))
+							const two = JSON.parse(r2); 
+
+							if (! lodash.isEqual(one,two))
 							{
 								const error_response = {
 									"message"	: "Unauthorized",
