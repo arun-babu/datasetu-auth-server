@@ -463,9 +463,7 @@ function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token
 								token_hash  + '#\n\n"'				+
 									consumer_id				+
 								'" wants to access "'				+
-									resource + '"\n\n'			+
-								"Request details:\n\n"				+
-									JSON.stringify (request,null,"\t"),
+									resource,
 
 					reply_markup	: JSON.stringify ({
 						inline_keyboard	: [[

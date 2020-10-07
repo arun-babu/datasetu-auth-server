@@ -100,18 +100,18 @@ slimbot.on('message', (message) => {
 
 	// update chat id for this user ....
 
-	const user = message.from.username || message.chat.username;
+	const provider = message.from.username || message.chat.username;
 
 	const rows = pg.querySync (
-		"SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [user]
+		"SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [provider]
 	);
 
-	if (rows.length === 0) // user does not exist
+	if (rows.length === 0) // provider does not exist
 	{
 		pg.querySync (
 			"INSERT INTO telegram VALUES($1::text,$2::text)",
 			[
-				user,
+				provider,
 				message.chat.id	
 			]
 		);
@@ -122,7 +122,7 @@ slimbot.on('message', (message) => {
 			"UPDATE telegram SET chat_id = $1::text WHERE telegram_id = $2::text",
 			[
 				message.chat.id,
-				user
+				provider	
 			]
 		);
 	}
@@ -133,12 +133,13 @@ slimbot.on('message', (message) => {
 
 slimbot.on('callback_query', (query) => {
 
-	const user = query.from.username || query.chat.username;
+	const provider	= query.from.username || query.chat.username;
+	const chat_id	= query.message.chat.id;
 
 	if (query.data === "DENY")
 	{
 		// TODO delete from DB ?
-		return slimbot.sendMessage(query.chat.id, "Access denied to the user");
+		return slimbot.sendMessage(chat_id, "Access denied to the user");
 	}
 
 	if (query.data === "ALLOW")
@@ -148,7 +149,7 @@ slimbot.on('callback_query', (query) => {
 		const split = query.message.text.split("#");
 
 		if (split.length < 4)
-			return slimbot.sendMessage(query.chat.id, "Invalid input");
+			return slimbot.sendMessage(chat_id, "Invalid input");
 
 		const index	= split[1];
 		const token	= split[2];
@@ -166,25 +167,26 @@ slimbot.on('callback_query', (query) => {
 			(error, results) =>
 			{
 				if (error)
-					return slimbot.sendMessage(query.chat.id, "Internal error!");
+					return slimbot.sendMessage(chat_id, "Internal error!");
 
 				if (results.rowCount === 0)
-					return slimbot.sendMessage(query.chat.id, "Invalid input!");
+					return slimbot.sendMessage(chat_id, "Invalid or expired token!");
 
-				const expected_user = results[0].manual_authorization_array["manual-authorization"];
+				const expected_provider = results.rows[0]
+								.manual_authorization_array[index]["manual-authorization"];
 
-				if ("telegram:" + user !== expected_user)
+				if ("telegram:" + provider !== expected_provider)
 				{
 					// TODO serious security issue ?
-					return slimbot.sendMessage(query.chat.id, "Invalid user!");
+					return slimbot.sendMessage(chat_id, "Invalid provider!");
 				}
 
 				// append the approved item from "manual_authorization_array" to "request"
 
 				pool.query (
 					"UPDATE token SET"							+
-						"request = request || "						+ 
-						" json_build_array(manual_authorization_array->>$1::int)"	+
+						" request = request || "					+ 
+						" jsonb_build_array(manual_authorization_array->>$1::int)"	+
 						" WHERE token = $2::text"					+
 						" AND manual_authorization_array->>$1::int IS NOT NULL",
 						[
@@ -194,12 +196,12 @@ slimbot.on('callback_query', (query) => {
 					(update_error, update_results) =>
 					{
 						if (update_error)
-							return slimbot.sendMessage(query.chat.id, "Internal error!");
+							return slimbot.sendMessage(chat_id, "Internal error!");
 
 						if (update_results.rowCount === 0)
-							return slimbot.sendMessage(query.chat.id, "Invalid input!");
+							return slimbot.sendMessage(chat_id, "Invalid input!");
 
-						return slimbot.sendMessage(query.chat.id, "Access granted to the user");
+						return slimbot.sendMessage(chat_id, "Access granted to the user");
 
 						// TODO remove the approved item from "manual_authorization_array"
 						// manual_authorization_array = manual_authorization_array::jsonb - index;
