@@ -26,6 +26,7 @@
 const fs			= require("fs");
 const os			= require("os");
 const Pool			= require("pg").Pool;
+const lodash			= require("lodash");
 const chroot			= require("chroot");
 const Slimbot			= require('slimbot');
 
@@ -155,14 +156,14 @@ slimbot.on('callback_query', (query) => {
 		const token	= split[2];
 
 		pool.query (
-			"SELECT manual_authorization_array"	+
-				" FROM token"			+
-				" WHERE token = $1::text"	+
-				" AND revoked = false"		+
-				" AND expiry > NOW()"		+
+			"SELECT request,manual_authorization_array"	+
+				" FROM token"				+
+				" WHERE token = $1::text"		+
+				" AND revoked = false"			+
+				" AND expiry > NOW()"			+
 				" LIMIT 1",
 				[
-					token,			// 1
+					token,				// 1
 				],
 			(error, results) =>
 			{
@@ -181,7 +182,21 @@ slimbot.on('callback_query', (query) => {
 					return slimbot.sendMessage(chat_id, "Invalid provider!");
 				}
 
-				// append the approved item from "manual_authorization_array" to "request"
+				const request			= results.rows[0].request;
+				const manual_authorization	= results.rows[0].manual_authorization_array[index];
+
+				if (! manual_authorization)
+					return slimbot.sendMessage(chat_id, "Invalid index!");
+
+				for (const r of request)
+				{
+					// if request was already authorized
+
+					if (lodash.isEqual(r,manual_authorization))
+						return slimbot.sendMessage(chat_id, "Request was already authorized");
+				}
+
+				// else append the approved item from "manual_authorization_array" to "request"
 
 				pool.query (
 					"UPDATE token SET"							+
