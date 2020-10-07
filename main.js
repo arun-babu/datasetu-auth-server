@@ -1959,6 +1959,26 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"body"			: r.body,
 				"manual-authorization"	: requires_manual_authorization,
 			});
+
+			const telegram_id = requires_manual_authorization
+						.split("telegram:")[1];
+
+			const rows = pg.querySync (
+				"SELECT chat_id FROM telegram"		+
+				" WHERE telegram_id = $1::text"		+
+				" LIMIT 1",
+				[
+					telegram_id			// 1
+				]
+			);
+
+			if (rows.length === 0)
+			{
+				return ERROR (res, 403,
+					"The provider has not connected to the 'datasetu_bot'."	+
+					"Please contact the provider manually"
+				);
+			}
 		}
 		else
 		{
@@ -4378,7 +4398,7 @@ if (cluster.isMaster)
 		cluster.fork();
 	});
 
-	let stats_app; 
+	let stats_app;
 
 	if (LAUNCH_ADMIN_PANEL)
 	{
