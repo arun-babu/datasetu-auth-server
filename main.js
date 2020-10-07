@@ -462,7 +462,7 @@ function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token
 					text		: '[ DataSetu Auth Server ] #' + index + '#'		+
 								token_hash  + '#\n\n"'				+
 									consumer_id				+
-								'" wants to access "'				+
+								'"\nis requesting access to\n"'			+
 									resource,
 
 					reply_markup	: JSON.stringify ({
