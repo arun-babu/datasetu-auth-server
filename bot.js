@@ -188,10 +188,10 @@ slimbot.on('callback_query', (query) => {
 				if (! manual_authorization)
 					return slimbot.sendMessage(chat_id, "Invalid index!");
 
-				for (const r of request)
+				for (let r of request)
 				{
 					// if request was already authorized
-					Object.freeze(r);
+					r = Object.freeze(JSON.parse(r));
 
 					if (lodash.isEqual(r,manual_authorization))
 						return slimbot.sendMessage(chat_id, "Request was already authorized");
