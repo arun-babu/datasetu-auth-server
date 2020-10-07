@@ -2756,7 +2756,7 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 	}
 	catch (x)
 	{
-		const err = typeof x === "function" ? x.message : String(x);
+		const err = typeof x === "object" ? x.message : String(x);
 		return ERROR (res, 400, "Syntax error in policy. " + err);
 	}
 
@@ -2870,7 +2870,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 	}
 	catch (x)
 	{
-		const err = typeof x === "function" ? x.message : String(x);
+		const err = typeof x === "object" ? x.message : String(x);
 		return ERROR (res, 400, "Syntax error in policy. " + err);
 	}
 
@@ -2914,7 +2914,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 			}
 			catch (x)
 			{
-				const err = typeof x === "function" ? x.message : String(x);
+				const err = typeof x === "object" ? x.message : String(x);
 
 				return ERROR (
 					res, 400,
@@ -3077,7 +3077,7 @@ app.post("/auth/v[1-2]/acl/revert", (req, res) => {
 		}
 		catch (x)
 		{
-			const err = typeof x === "function" ? x.message : String(x);
+			const err = typeof x === "object" ? x.message : String(x);
 
 			return ERROR (
 				res, 400,
