@@ -194,7 +194,7 @@ slimbot.on('callback_query', (query) => {
 				for (let r of request)
 				{
 					// if request was already authorized
-					r = Object.freeze(JSON.parse(r));
+					r = Object.freeze(r);
 
 					if (lodash.isEqual(r,manual_authorization))
 						return slimbot.sendMessage(chat_id, "Request was already authorized");
@@ -205,7 +205,7 @@ slimbot.on('callback_query', (query) => {
 				pool.query (
 					"UPDATE token SET"							+
 						" request = request || "					+ 
-						" jsonb_build_array(manual_authorization_array->>$1::int)"	+
+						" CONCAT('[',manual_authorization_array->>$1::int,']')::jsonb"	+
 						" WHERE token = $2::text"					+
 						" AND manual_authorization_array->>$1::int IS NOT NULL",
 						[
