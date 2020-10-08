@@ -2316,6 +2316,18 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 
 			for (const r of request)
 			{
+				if (! is_string_safe(r.id))
+				{
+					const error_response = {
+						"message"	: "'id' must be a valid string",
+						"invalid-input"	: xss_safe(r.id)
+					};
+
+					return ERROR (res, 400,
+						error_response
+					);
+				}
+
 				const split		= r.id.split("/");
 
 				const email_domain	= split[0].toLowerCase();
