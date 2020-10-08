@@ -103,29 +103,32 @@ slimbot.on('message', (message) => {
 
 	const provider = message.from.username || message.chat.username;
 
-	const rows = pg.querySync (
-		"SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [provider]
-	);
+	if (provider)
+	{
+		const rows = pg.querySync (
+			"SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [provider]
+		);
 
-	if (rows.length === 0) // provider does not exist
-	{
-		pg.querySync (
-			"INSERT INTO telegram VALUES($1::text,$2::text)",
-			[
-				provider,
-				message.chat.id	
-			]
-		);
-	}
-	else
-	{
-		pg.querySync (
-			"UPDATE telegram SET chat_id = $1::text WHERE telegram_id = $2::text",
-			[
-				message.chat.id,
-				provider	
-			]
-		);
+		if (rows.length === 0) // provider does not exist
+		{
+			pg.querySync (
+				"INSERT INTO telegram VALUES($1::text,$2::text)",
+				[
+					provider,
+					message.chat.id	
+				]
+			);
+		}
+		else
+		{
+			pg.querySync (
+				"UPDATE telegram SET chat_id = $1::text WHERE telegram_id = $2::text",
+				[
+					message.chat.id,
+					provider	
+				]
+			);
+		}
 	}
 
 	if (message.text === "/start")
