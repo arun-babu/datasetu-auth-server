@@ -191,10 +191,13 @@ slimbot.on('callback_query', (query) => {
 				if (! manual_authorization)
 					return slimbot.sendMessage(chat_id, "Invalid index!");
 
-				for (let r of request)
+				if (typeof manual_authorization !== "object")
+					return slimbot.sendMessage(chat_id, "Invalid data in database!");
+
+				for (const r of request)
 				{
 					// if request was already authorized
-					r = Object.freeze(r);
+					Object.freeze(r);
 
 					if (lodash.isEqual(r,manual_authorization))
 						return slimbot.sendMessage(chat_id, "Request was already authorized");
@@ -228,6 +231,10 @@ slimbot.on('callback_query', (query) => {
 				);
 			}
 		);
+	}
+	else
+	{
+		// TODO delete from manual_authorization_array ?
 	}
 });
 
