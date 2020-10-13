@@ -194,6 +194,8 @@ slimbot.on('callback_query', (query) => {
 				if (typeof manual_authorization !== "object")
 					return slimbot.sendMessage(chat_id, "Invalid data in database!");
 
+				Object.freeze (manual_authorization);
+
 				for (const r of request)
 				{
 					// if request was already authorized
@@ -203,7 +205,7 @@ slimbot.on('callback_query', (query) => {
 						return slimbot.sendMessage(chat_id, "Request was already authorized");
 				}
 
-				// else append the approved item from "manual_authorization_array" to "request"
+				// Else append the approved item from "manual_authorization_array" to "request"
 
 				pool.query (
 					"UPDATE token SET"							+

@@ -439,60 +439,55 @@ function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token
 	pool.query ("SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [telegram_id], (error,results) =>
 	{
 		if (error)
-			send_telegram ("Failed to get chat_id for : " + telegram_id + " : provider " + provider_id);
-		else
-		{
-			if (results.rows.length === 0)
-			{
-				send_telegram ("No chat id for : " + telegram_id + " : provider " + provider_id);
-				return;
+			return send_telegram ("Failed to get chat_id for : " + telegram_id + " : provider " + provider_id);
+
+		if (results.rows.length === 0)
+			return send_telegram ("No chat id for : " + telegram_id + " : provider " + provider_id);
+
+		const url		= TELEGRAM + "/bot" + telegram_apikey + "/sendMessage";
+
+		const split		= request.id.split("/");
+		const resource		= split.slice(2).join("/");
+
+		const telegram_message	= {
+
+			url		: url,
+			form		: {
+				chat_id		: results.rows[0].chat_id,
+
+				text		: '[ DataSetu Auth Server ] #' + index + '#'		+
+							token_hash  + '#\n\n"'				+
+								consumer_id				+
+							'"\n\tis requesting access to\n"'		+
+								resource + '"',
+
+				reply_markup	: JSON.stringify ({
+					inline_keyboard	: [[
+						{
+							text		: "\u2714\ufe0f Allow",
+							callback_data	: "ALLOW"
+						},
+						{
+							text		: "\u2716\ufe0f Deny",
+							callback_data	: "DENY"
+						}
+					]]
+				})
 			}
+		};
 
-			const url		= TELEGRAM + "/bot" + telegram_apikey + "/sendMessage";
+		http_request.post (telegram_message, (error_1, response, body) => {
 
-			const split		= request.id.split("/");
-			const resource		= split.slice(2).join("/");
-
-			const telegram_message	= {
-
-				url		: url,
-				form		: {
-					chat_id		: results.rows[0].chat_id,
-
-					text		: '[ DataSetu Auth Server ] #' + index + '#'		+
-								token_hash  + '#\n\n"'				+
-									consumer_id				+
-								'"\n\tis requesting access to\n"'		+
-									resource + '"',
-
-					reply_markup	: JSON.stringify ({
-						inline_keyboard	: [[
-							{
-								text		: "\u2714\ufe0f Allow",
-								callback_data	: "ALLOW"
-							},
-							{
-								text		: "\u2716\ufe0f Deny",
-								callback_data	: "DENY"
-							}
-						]]
-					})
-				}
-			};
-
-			http_request.post (telegram_message, (error_1, response, body) => {
-
-				if (error_1)
-				{
-					log ("yellow",
-						"Telegram failed ! response = " +
-							String(response)	+
-						" body = "			+
-							String(body)
-					);
-				}
-			});
-		}
+			if (error_1)
+			{
+				log ("yellow",
+					"Telegram failed ! response = " +
+						String(response)	+
+					" body = "			+
+						String(body)
+				);
+			}
+		});
 	});
 }
 
@@ -931,7 +926,6 @@ function xss_safe (input)
 	else
 	{
 		// we can only change string variables
-
 		return input;
 	}
 }
@@ -1442,17 +1436,10 @@ function ocsp_check (req, res, next)
 
 function to_array (o)
 {
-	if (o instanceof Object)
-	{
-		if (o instanceof Array)
-			return o;
-		else
-			return [o];
-	}
+	if (o instanceof Array)
+		return o;
 	else
-	{
 		return [o];
-	}
 }
 
 /* --- Auth APIs --- */
