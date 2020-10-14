@@ -434,7 +434,7 @@ function base64 (string)
 		.toString("base64");
 }
 
-function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token_hash, request, index)
+function send_telegram_to_provider (consumer_id, consumer_title, provider_id, telegram_id, token_hash, request, index)
 {
 	pool.query ("SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [telegram_id], (error,results) =>
 	{
@@ -458,7 +458,10 @@ function send_telegram_to_provider (consumer_id, provider_id, telegram_id, token
 				text		: '[ DataSetu Auth Server ] #' + index + '#'		+
 							token_hash  + '#\n\n"'				+
 								consumer_id				+
-							'"\n\tis requesting access to\n"'		+
+							'"\n('						+
+								consumer_title				+
+							')'						+
+							'\n\n\tis requesting access to:\n\n"'		+
 								resource + '"',
 
 				reply_markup	: JSON.stringify ({
@@ -2147,6 +2150,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 			send_telegram_to_provider (
 				consumer_id,
+				cert.subject.title || "Unknown",
 				provider_id_hash,
 				telegram_id,
 				sha256_of_token,
