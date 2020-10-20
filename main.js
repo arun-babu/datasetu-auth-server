@@ -29,6 +29,7 @@ const dns			= require("dns");
 const cors			= require("cors");
 const ocsp			= require("ocsp");
 const Pool			= require("pg").Pool;
+const http			= require("http");
 const https			= require("https");
 const assert			= require("assert").strict;
 const chroot			= require("chroot");
@@ -4440,14 +4441,15 @@ if (cluster.isMaster)
 		cluster.fork();
 	});
 
-	let stats_app;
-
 	if (LAUNCH_ADMIN_PANEL)
 	{
-		stats_app = express();
+		const stats_app = express();
 
 		stats_app.use(compression());
 		stats_app.use(bodyParser.raw({type:"*/*"}));
+
+		http.createServer(stats_app).listen(8443,"127.0.0.1");
+		stats_app.all("/*",show_statistics);
 	}
 
 	if (is_openbsd) // drop "rpath"
@@ -4456,12 +4458,6 @@ if (cluster.isMaster)
 			"error stdio tty prot_exec inet dns recvfd " +
 			"sendfd exec proc"
 		);
-	}
-
-	if (LAUNCH_ADMIN_PANEL)
-	{
-		https.createServer(https_options,stats_app).listen(8443,"127.0.0.1");
-		stats_app.all("/*",show_statistics);
 	}
 }
 else
