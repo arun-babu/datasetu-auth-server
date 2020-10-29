@@ -1,0 +1,69 @@
+
+Get access control list
+-----------------------
+
+Endpoint:
+
+	https://auth.datasetu.org/auth/v1/acl
+
+Description:
+
+	This API is used to get previously set access control policies.
+
+Called by:
+
+	A "data provider" with a valid class-3 or above certificate.
+
+Methods:
+
+	POST
+
+HTTP response code:
+
+	200
+		If the policy has been successfully retrieved.
+
+	400
+		If no policies have been set yet.
+
+Using datasetu SDK:
+
+	from datasetu.auth import auth
+
+	iudx_auth = auth.Auth("certificate.pem","private-key.pem")
+
+	iudx_auth.get_policy()
+
+CURL example:
+
+	Request:
+
+		curl -XPOST https://auth.datasetu.org/auth/v1/acl --cert certificate.pem --key private-key.pem
+
+	Response:
+
+		200 OK
+		content-type : "application/json"
+
+		{
+			"policy"		: [
+				"*@iisc.ac.in can access rs1.com/my-resource-name for 3 hours",
+				"arun@iisc.ac.in can access *.com/rs1 if tokens_per_day < 100"
+			]
+
+			"previous-policy"	: [],
+
+			"last-updated"		: "2020-04-20T03:35:14.572Z"
+		}
+
+See also:
+
+	acl set API:
+		http://auth.datasetu.org/acl-set.html
+
+	acl append API:
+		http://auth.datasetu.org/acl-append.html
+
+	node aperture at github:
+		https://github.com/rbccps-iisc/node-aperture
+
