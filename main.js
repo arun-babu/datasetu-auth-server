@@ -1876,7 +1876,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				return ERROR (res, 400, error_response);
 			}
 
-			CTX.conditions.scope = r.scope;
+			CTX.conditions.scope = scope;
 
 			for (const api of r.apis)
 			{
@@ -2051,7 +2051,6 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 		"token-type"		: "DATASETU",
 		"expires-in"		: token_time,
 
-		"//"			: "",
 		"is_token_valid"	: true,
 
 		"payment-info"	: {
