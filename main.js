@@ -7,6 +7,7 @@
  * --------
  * Arun Babu    {barun       <at> iisc <dot> ac <dot> in}
  * Bryan Robert {bryanrobert <at> iisc <dot> ac <dot> in}
+ * Poorna Chandra Tejasvi {poornachandra <at> iisc <dot> ac <dot> in}
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -46,6 +47,7 @@ const bodyParser		= require("body-parser");
 const compression		= require("compression");
 const http_request		= require("request");
 
+const is_development_env        = (process.env.NODE_ENV === "development");
 const pgNativeClient		= require("pg-native");
 const pg			= new pgNativeClient();
 
@@ -58,7 +60,13 @@ const pledge			= is_openbsd ? require("node-pledge")	: null;
 const unveil			= is_openbsd ? require("openbsd-unveil"): null;
 
 const NUM_CPUS			= os.cpus().length;
-const SERVER_NAME		= fs.readFileSync ("server.name","ascii").trim();
+const SERVER_NAME		= is_development_env 
+				    ? "auth.local" 
+				    : fs.readFileSync ("server.name","ascii").trim();
+
+//For dev env only
+const ALLOWED_SERVER_NAMES	= ["localhost", "localhost:8443", "auth.local", "127.0.0.1", "127.0.0.1:8443"]
+
 const DOCUMENTATION_LINK	= fs.readFileSync ("documentation.link","ascii").trim();
 
 const MAX_TOKEN_TIME		= 31536000; // in seconds (1 year)
@@ -154,10 +162,12 @@ const telegram_url	= TELEGRAM + "/bot" + telegram_apikey +
 
 /* --- postgres --- */
 
-const DB_SERVER	= "127.0.0.1";
+const DB_SERVER	= is_development_env ? "postgres" : "127.0.0.1";
 
 const password	= {
-	"DB"	: fs.readFileSync("passwords/auth.db.password","ascii").trim(),
+	"DB"	: is_development_env 
+		    ?	process.env.POSTGRES_PASSWORD
+		    :	fs.readFileSync("passwords/auth.db.password","ascii").trim(),
 };
 
 /* --- razorpay --- */
@@ -175,7 +185,7 @@ const rzpay_url		= "https://"					+
 const pool = new Pool ({
 	host		: DB_SERVER,
 	port		: 5432,
-	user		: "auth",
+	user		: is_development_env ? "postgres" : "auth",
 	database	: "postgres",
 	password	: password.DB,
 });
@@ -183,8 +193,14 @@ const pool = new Pool ({
 pool.connect();
 
 // sync postgres connection
-pg.connectSync (
-	"postgresql://auth:"+ password.DB + "@" + DB_SERVER + ":5432/postgres",
+sync_conn_str = "postgresql://" + (is_development_env ? "postgres" : "auth") 
+		+ ":" 
+		+ password.DB 
+		+ "@" 
+		+ DB_SERVER 
+		+ ":5432/postgres";
+
+pg.connectSync (sync_conn_str,
 		(err) =>
 		{
 			if (err) {
@@ -281,8 +297,12 @@ const system_trusted_certs = is_openbsd ?
 					"/etc/ssl/cert.pem" :
 					"/etc/ssl/certs/ca-certificates.crt";
 
+const ca_cert_path = is_development_env 
+			? "../datasetu-ca/ca.datasetu.org.crt"
+			: "ca.datasetu.org.crt"
+
 const trusted_CAs = [
-	fs.readFileSync("ca.datasetu.org.crt"),
+	fs.readFileSync(ca_cert_path),
 	fs.readFileSync(system_trusted_certs),
 	fs.readFileSync("CCAIndia2015.cer"),
 	fs.readFileSync("CCAIndia2014.cer")
@@ -361,8 +381,16 @@ function is_valid_token (token, user = null)
 	const issued_to		= split[1];
 	const random_hex	= split[2];
 
-	if (issued_by !== SERVER_NAME)
+	if (!is_development_env)
+	{
+	    if (issued_by !== SERVER_NAME)
 		return false;
+	}
+	else
+	{   
+	    if (!ALLOWED_SERVER_NAMES.includes(issued_by))
+		return false;
+	}
 
 	if (random_hex.length !== TOKEN_LEN_HEX)
 		return false;
@@ -756,8 +784,18 @@ function is_secure (req, res, cert, validate_email = true)
 	res.header("X-XSS-Protection",		"1; mode=block");
 	res.header("X-Content-Type-Options",	"nosniff");
 
-	if (req.headers.host && req.headers.host !== SERVER_NAME)
+
+	if (!is_development_env)
+	{
+	    if (req.headers.host && req.headers.host !== SERVER_NAME)
 		return "Invalid 'host' field in the header";
+	}
+	else
+	{
+	    if (req.headers.host && !ALLOWED_SERVER_NAMES.includes(req.headers.host))
+		return "Invalid 'host' field in the header";
+	}
+
 
 	if (req.headers.origin)
 	{
@@ -942,7 +980,8 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	exceptions = exceptions + "-/.@";
+	//Add : for port numbers
+	exceptions = exceptions + (is_development_env ? ":" : "") + "-/.@";
 
 	for (const ch of str)
 	{
@@ -4463,7 +4502,9 @@ else
 {
 	https.createServer(https_options,app).listen(443,"0.0.0.0");
 
-	drop_worker_privileges();
+	if (!is_development_env)
+	    drop_worker_privileges();
+
 
 	log("green","Worker started with pid " + process.pid);
 }
