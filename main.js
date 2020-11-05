@@ -7,7 +7,6 @@
  * --------
  * Arun Babu    {barun       <at> iisc <dot> ac <dot> in}
  * Bryan Robert {bryanrobert <at> iisc <dot> ac <dot> in}
- * Poorna Chandra Tejasvi {poornachandra <at> iisc <dot> ac <dot> in}
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -60,6 +59,137 @@ const is_openbsd		= os.type() === "OpenBSD";
 const pledge			= is_openbsd ? require("node-pledge")	: null;
 const unveil			= is_openbsd ? require("openbsd-unveil"): null;
 
+const TOKEN_LEN			= 16;
+const TOKEN_LEN_HEX		= 32;
+const NUM_CPUS			= os.cpus().length;
+const MAX_TOKEN_TIME		= 31536000; // in seconds (1 year)
+const MIN_TOKEN_HASH_LEN	= 64;
+const MAX_TOKEN_HASH_LEN	= 64;
+const MAX_SAFE_STRING_LEN	= 512;
+
+const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
+				    /* resource server API */
+					"/auth/v1/token/introspect"		: 1,
+					"/auth/v1/certificate-info"		: 1,
+					    
+				    /* data consumer's APIs */
+					"/auth/v1/token"			: 2,
+					    
+				    /* for credit topup */
+					"/marketplace/topup-success"		: 2,
+					    
+				    /* static files for marketplace */
+					"/marketplace/topup.html"		: 2,
+					"/marketplace/marketplace.js"		: 2,
+					"/marketplace/marketplace.css"		: 2,
+					    
+				    /* marketplace APIs */
+					"/marketplace/v1/credit/info"		: 2,
+					"/marketplace/v1/credit/topup"		: 2,
+					"/marketplace/v1/confirm-payment"	: 2,
+					"/marketplace/v1/audit/credits"		: 2,
+					"/marketplace/v1/credit/transfer"	: 3,
+					    
+				    /* data provider's APIs */
+					"/auth/v1/audit/tokens"			: 3,
+					    
+					"/auth/v1/token/revoke"			: 3,
+					"/auth/v1/token/revoke-all"		: 3,
+					    
+					"/auth/v1/acl"				: 3,
+					"/auth/v1/acl/set"			: 3,
+					"/auth/v1/acl/revert"			: 3,
+					"/auth/v1/acl/append"			: 3,
+					    
+					"/auth/v1/group/add"			: 3,
+					"/auth/v1/group/delete"			: 3,
+					"/auth/v1/group/list"			: 3,
+				    });
+
+const HTTPS_OPTIONS		= Object.freeze ({
+					key		    : fs.readFileSync("https-key.pem"),
+					cert		    : fs.readFileSync("https-certificate.pem"),
+					ca		    : trusted_CAs,
+					requestCert	    : true,
+					rejectUnauthorized  : true,
+				    });
+
+const STATIC_PAGES		= Object.freeze ({
+				    /* GET end points */
+					
+					"/marketplace/topup.html"	: fs.readFileSync (
+									    "static/topup.html",	    "ascii"
+								    ),
+					
+					"/marketplace/marketplace.js"   : fs.readFileSync (
+									    "static/marketplace.js",	    "ascii"
+								    ),
+					
+					"/marketplace/marketplace.css"  : fs.readFileSync (
+									    "static/marketplace.css",	    "ascii"
+								    ),
+					
+				    /* templates */
+					
+					"topup-success-1.html"		: fs.readFileSync (
+									    "static/topup-success-1.html",  "ascii"
+								    ),
+					"topup-success-2.html"		: fs.readFileSync (
+									    "static/topup-success-2.html",  "ascii"
+								    ),
+					"topup-failure-1.html"		: fs.readFileSync (
+									    "static/topup-failure-1.html",  "ascii"
+								    ),
+					"topup-failure-2.html"		: fs.readFileSync (
+									    "static/topup-failure-2.html",  "ascii"
+								    ),
+				    });
+
+const MIME_TYPE			= Object.freeze	({
+					"js"	: "text/javascript",
+					"css"	: "text/css",
+					"html"	: "text/html"
+				    });
+
+const TOPUP_SUCCESS_1		= STATIC_PAGES["topup-success-1.html"];
+const TOPUP_SUCCESS_2		= STATIC_PAGES["topup-success-2.html"];
+const TOPUP_FAILURE_1 		= STATIC_PAGES["topup-failure-1.html"];
+const TOPUP_FAILURE_2 		= STATIC_PAGES["topup-failure-2.html"]
+
+const TELEGRAM_URL		= config.TELEGRAM 
+				    + "/bot" 
+				    + config.TELEGRAM_APIKEY 
+				    + "/sendMessage?chat_id="	
+				    + config.TELEGRAM_CHAT_ID 
+				    + "&text=";
+
+const SYNC_CONN_STR		= "postgresql://" + config.DB_USER 
+				    + ":" 
+				    + config.DB_PASSWORD
+				    + "@" 
+				    + config.DB_SERVER 
+				    + ":5432/postgres";
+
+const RZPAY_URL			= "https://"
+				    + config.RZPAY_KEY_ID
+				    + ":"
+				    + config.RZPAY_KEY_SECRET
+				    + "@api.razorpay.com/v1/invoices/";
+
+const SYSTEM_TRUSTED_CERTS	= is_openbsd
+				    ? "/etc/ssl/cert.pem" 
+				    : "/etc/ssl/certs/ca-certificates.crt";
+
+const CA_CERT_PATH		= "ca.datasetu.org.crt";
+
+const TRUSTED_CAS		=   [
+					fs.readFileSync(CA_CERT_PATH),
+					fs.readFileSync(SYSTEM_TRUSTED_CERTS),
+			    		fs.readFileSync("CCAIndia2015.cer"),
+			    		fs.readFileSync("CCAIndia2014.cer")
+				    ];
+
+const SERVER_CERTIFICATE	= fs.readFileSync(__dirname + "/certificate.pem.p12");
 
 process.env.TZ = "Asia/Kolkata";
 
@@ -95,7 +225,7 @@ const pool = new Pool ({
 
 pool.connect();
 
-pg.connectSync (config.SYNC_CONN_STR,
+pg.connectSync (SYNC_CONN_STR,
 		(err) =>
 		{
 		    if (err) {
@@ -213,7 +343,7 @@ function is_valid_token (token, user = null)
 		return false;
 	}
 
-	if (random_hex.length !== config.TOKEN_LEN_HEX)
+	if (random_hex.length !== TOKEN_LEN_HEX)
 		return false;
 
 	if (user && user !== issued_to)
@@ -230,10 +360,10 @@ function is_valid_tokenhash (token_hash)
 	if (! is_string_safe(token_hash))
 		return false;
 
-	if (token_hash.length < config.MIN_TOKEN_HASH_LEN)
+	if (token_hash.length < MIN_TOKEN_HASH_LEN)
 		return false;
 
-	if (token_hash.length > config.MAX_TOKEN_HASH_LEN)
+	if (token_hash.length > MAX_TOKEN_HASH_LEN)
 		return false;
 
 	return true;
@@ -255,7 +385,7 @@ function is_valid_servertoken (server_token, hostname)
 	if (issued_to !== hostname)
 		return false;
 
-	if (random_hex.length !== config.TOKEN_LEN_HEX)
+	if (random_hex.length !== TOKEN_LEN_HEX)
 		return false;
 
 	return true;
@@ -346,7 +476,7 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 
 function send_telegram (message)
 {
-	http_request ( config.TELEGRAM_URL + "[ AUTH ] : " + message, (error, response, body) =>
+	http_request ( TELEGRAM_URL + "[ AUTH ] : " + message, (error, response, body) =>
 	{
 		if (error)
 		{
@@ -374,7 +504,7 @@ function log(color, msg)
 function SERVE_HTML (req,res)
 {
 	const path	= req.url.split("?")[0];
-	const page	= config.STATIC_PAGES[path];
+	const page	= STATIC_PAGES[path];
 
 	if (! page)
 		return false;
@@ -382,7 +512,7 @@ function SERVE_HTML (req,res)
 	const split	= path.split(".");
 	const extension	= split[split.length - 1].toLowerCase();
 
-	const mime	= config.MIME_TYPE[extension] || "text/html";
+	const mime	= MIME_TYPE[extension] || "text/html";
 
 	res.setHeader("Content-Type", mime);
 	res.status(200).end(page);
@@ -798,7 +928,7 @@ function is_string_safe (str, exceptions = "")
 	if (! str || typeof str !== "string")
 		return false;
 
-	if (str.length === 0 || str.length > config.MAX_SAFE_STRING_LEN)
+	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
 	//Add : for port numbers
@@ -901,7 +1031,7 @@ function basic_security_check (req, res, next)
 
 	const endpoint			= req.url.split("?")[0];
 	const api			= endpoint.replace(/\/v[1-2]\//,"/v1/");
-	const min_class_required	= config.MIN_CERT_CLASS_REQUIRED[api];
+	const min_class_required	= MIN_CERT_CLASS_REQUIRED[api];
 
 	if (config.LAUNCH_ADMIN_PANEL)
 		process.send(endpoint);
@@ -1333,7 +1463,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 	}
 
 	let requested_token_time;		// as specified by the consumer
-	let token_time = config.MAX_TOKEN_TIME;	// to be sent along with token
+	let token_time = MAX_TOKEN_TIME;	// to be sent along with token
 
 	if (body["token-time"])
 	{
@@ -1342,13 +1472,13 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 		if (
 			isNaN(requested_token_time)		||
 			requested_token_time < 1		||
-			requested_token_time > config.MAX_TOKEN_TIME
+			requested_token_time > MAX_TOKEN_TIME
 		)
 		{
 			return ERROR (
 				res, 400,
 				"'token-time' should be > 0 and < " +
-				config.MAX_TOKEN_TIME
+				MAX_TOKEN_TIME
 			);
 		}
 	}
@@ -1898,7 +2028,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 		return ERROR (res, 403, "Unauthorized!");
 
 	const random_hex = crypto
-				.randomBytes(config.TOKEN_LEN)
+				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
 	/* Token format = issued-by / issued-to / random-hex-string */
@@ -1980,7 +2110,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 			resource_server_token[key] = key + "/" +
 							crypto
-							.randomBytes(config.TOKEN_LEN)
+							.randomBytes(TOKEN_LEN)
 							.toString("hex");
 
 			sha256_of_resource_server_token[key] = sha256 (
@@ -3556,7 +3686,7 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 	};
 
 	const options = {
-		url	: config.RZPAY_URL,
+		url	: RZPAY_URL,
 		headers	: {"Content-Type": "application/json"},
 		json	: true,
 		body	: post_body
@@ -3655,7 +3785,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 				");"					+
 			"</script>";
 
-		const page = config.TOPUP_FAILURE_1 + response_mid + config.TOPUP_FAILURE_2;
+		const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 		res.setHeader("Content-Type", "text/html");
 		res.status(400).end(page);
@@ -3700,7 +3830,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 				");"					+
 			"</script>";
 
-		const page = config.TOPUP_FAILURE_1 + response_mid + config.TOPUP_FAILURE_2;
+		const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 		res.setHeader("Content-Type", "text/html");
 		res.status(400).end(page);
@@ -3746,7 +3876,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 					");"					+
 				"</script>";
 
-			const page = config.TOPUP_FAILURE_1 + response_mid + config.TOPUP_FAILURE_2;
+			const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 			res.setHeader("Content-Type", "text/html");
 			res.status(400).end(page);
@@ -3776,7 +3906,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 					");"					+
 				"</script>";
 
-			const page = config.TOPUP_FAILURE_1 + response_mid + config.TOPUP_FAILURE_2;
+			const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 			res.setHeader("Content-Type", "text/html");
 			res.status(400).end(page);
@@ -3802,7 +3932,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 					");"					+
 				"</script>";
 
-		const page = config.TOPUP_SUCCESS_1 + response_mid + config.TOPUP_SUCCESS_2;
+		const page = TOPUP_SUCCESS_1 + response_mid + TOPUP_SUCCESS_2;
 
 		res.setHeader("Content-Type", "text/html");
 		res.status(200).end(page);
@@ -4173,7 +4303,7 @@ app.all("/*", (req, res) => {
 		{
 			const path = req.url.split("?")[0];
 
-			if (config.MIN_CERT_CLASS_REQUIRED[path])
+			if (MIN_CERT_CLASS_REQUIRED[path])
 				return ERROR (res, 405, "Method must be POST." + doc);
 			else
 				return ERROR (res, 404, "Page not found." + doc);
@@ -4269,14 +4399,14 @@ if (cluster.isMaster)
 
 	log("yellow","Master started with pid " + process.pid);
 
-	const ALL_END_POINTS = Object.keys(config.MIN_CERT_CLASS_REQUIRED).sort();
+	const ALL_END_POINTS = Object.keys(MIN_CERT_CLASS_REQUIRED).sort();
 
 	for (const e of ALL_END_POINTS)
 		statistics.api.count[e] = 0;
 
 	statistics.start_time = Math.floor (Date.now() / 1000);
 
-	for (let i = 0; i < config.NUM_CPUS; i++) {
+	for (let i = 0; i < NUM_CPUS; i++) {
 		cluster.fork();
 	}
 
@@ -4321,7 +4451,7 @@ if (cluster.isMaster)
 }
 else
 {
-	https.createServer(config.HTTPS_OPTIONS,app).listen(443,"0.0.0.0");
+	https.createServer(HTTPS_OPTIONS,app).listen(443,"0.0.0.0");
 
 	if (!is_dev_env)
 	    drop_worker_privileges();
