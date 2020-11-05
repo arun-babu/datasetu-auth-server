@@ -1,3 +1,5 @@
+const fs	= require("fs");
+
 module.exports	=   {
 			SERVER_NAME		: "auth.datasetu.org",
 			ALLOWED_SERVER_NAMES    : ["localhost", "localhost:8443", "auth.local", "127.0.0.1", "127.0.0.1:8443"],
@@ -10,7 +12,7 @@ module.exports	=   {
 			TELEGRAM_CHAT_ID	: "",
 			DB_SERVER		: "127.0.0.1",
 			DB_USER			: "auth",
-			DB_PASSWORD		: "",
+			DB_PASSWORD		: fs.readFileSync("passwords/auth.db.password","ascii").trim(),
 			RZPAY_KEY_ID		: "",
 			RZPAY_KEY_SECRET	: ""
 		    }
