@@ -13,6 +13,6 @@ module.exports	=   {
 			DB_SERVER		: "127.0.0.1",
 			DB_USER			: "auth",
 			DB_PASSWORD		: fs.readFileSync("passwords/auth.db.password","ascii").trim(),
-			RZPAY_KEY_ID		: "",
-			RZPAY_KEY_SECRET	: ""
+			RZPAY_KEY_ID		: "your-razorpay-key-id",
+			RZPAY_KEY_SECRET	: "your-razorpay-key-secret"
 		    }
