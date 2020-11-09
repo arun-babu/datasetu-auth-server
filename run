@@ -3,8 +3,8 @@
 export NODE_ENV=production
 export TZ=Asia/Kolkata
 
-telegram_apikey=`cat telegram.apikey`
-telegram_chat_id=`cat telegram.chatid`
+telegram_apikey=`grep TELEGRAM_APIKEY config-prod.js | grep -o "\".*\"," | tr -d '",'`
+telegram_chat_id=`grep TELEGRAM_CHAT_ID config-prod.js | grep -o "\".*\"," | tr -d '",'`
 
 id=`id | cut -f1 -d'('`
 

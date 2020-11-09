@@ -26,11 +26,9 @@ The system will reboot after the setup; after which, the Auth server should be
 ready at <https://localhost>.
 
 ### 2.3 Setup telegram (as root) 
-You may edit the files:
+You may add the telegram apikey and chat id in:
 
-`/home/datasetu-auth-server/telegram.apikey`
-	and
-`/home/datasetu-auth-server/telegram.chatid`
+`/home/datasetu-auth-server/config-prod.js`
 
 to get telegram notifications.
 

@@ -67,6 +67,20 @@ const MIN_TOKEN_HASH_LEN	= 64;
 const MAX_TOKEN_HASH_LEN	= 64;
 const MAX_SAFE_STRING_LEN	= 512;
 
+const SYSTEM_TRUSTED_CERTS	= is_openbsd
+				    ? "/etc/ssl/cert.pem" 
+				    : "/etc/ssl/certs/ca-certificates.crt";
+
+const CA_CERT_PATH		= "ca.datasetu.org.crt";
+
+const TRUSTED_CAs		=   [
+					fs.readFileSync(CA_CERT_PATH),
+					fs.readFileSync(SYSTEM_TRUSTED_CERTS),
+			    		fs.readFileSync("CCAIndia2015.cer"),
+			    		fs.readFileSync("CCAIndia2014.cer")
+				    ];
+
+
 const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
 				    /* resource server API */
 					"/auth/v1/token/introspect"		: 1,
@@ -109,7 +123,7 @@ const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
 const HTTPS_OPTIONS		= Object.freeze ({
 					key		    : fs.readFileSync("https-key.pem"),
 					cert		    : fs.readFileSync("https-certificate.pem"),
-					ca		    : trusted_CAs,
+					ca		    : TRUSTED_CAs,
 					requestCert	    : true,
 					rejectUnauthorized  : true,
 				    });
@@ -176,20 +190,6 @@ const RZPAY_URL			= "https://"
 				    + config.RZPAY_KEY_SECRET
 				    + "@api.razorpay.com/v1/invoices/";
 
-const SYSTEM_TRUSTED_CERTS	= is_openbsd
-				    ? "/etc/ssl/cert.pem" 
-				    : "/etc/ssl/certs/ca-certificates.crt";
-
-const CA_CERT_PATH		= "ca.datasetu.org.crt";
-
-const TRUSTED_CAS		=   [
-					fs.readFileSync(CA_CERT_PATH),
-					fs.readFileSync(SYSTEM_TRUSTED_CERTS),
-			    		fs.readFileSync("CCAIndia2015.cer"),
-			    		fs.readFileSync("CCAIndia2014.cer")
-				    ];
-
-const SERVER_CERTIFICATE	= fs.readFileSync(__dirname + "/certificate.pem.p12");
 
 process.env.TZ = "Asia/Kolkata";
 
@@ -419,7 +419,7 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 	pool.query ("SELECT chat_id FROM telegram WHERE telegram_id = $1::text LIMIT 1", [telegram_id], (error,results) =>
 	{
 		if (error)
-			return send_telegram ("Failed to get chat_id for : " + telegram_id " : provider " + provider_id);
+			return send_telegram ("Failed to get chat_id for : " + telegram_id + " : provider " + provider_id);
 
 		if (results.rows.length === 0)
 			return send_telegram ("No chat id for : " + telegram_id + " : provider " + provider_id);
@@ -4345,11 +4345,12 @@ if (! is_openbsd)
 
 function drop_worker_privileges()
 {
-	for (const k in password)
-	{
-		password[k] = null;
-		delete password[k];	// forget all passwords
-	}
+	//Since there was only one password (password.DB), it has been moved to config.DB_PASSWORD
+	//for (const k in password)
+	//{
+	//	password[k] = null;
+	//	delete password[k];	// forget all passwords
+	//}
 
 	if (is_openbsd)
 	{
