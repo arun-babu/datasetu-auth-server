@@ -14,6 +14,8 @@ module.exports	= Object.freeze ({
 	TELEGRAM_APIKEY		: "your-telegram-apikey",
 	TELEGRAM_CHAT_ID	: "your-telegram-chat-id",
 
+	BOT_TELEGRAM_APIKEY	: "your-bot's-telegram-apikey",
+
 	DB_SERVER		: "postgres",
 	DB_USER			: "postgres",
 	DB_PASSWORD		:  process.env.POSTGRES_PASSWORD,

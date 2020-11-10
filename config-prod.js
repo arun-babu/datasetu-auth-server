@@ -16,6 +16,8 @@ module.exports	=   Object.freeze ({
 	TELEGRAM_APIKEY		: "your-telegram-apikey",
 	TELEGRAM_CHAT_ID	: "your-telegram-chat-id",
 
+	BOT_TELEGRAM_APIKEY	: "your-bot's-telegram-apikey",
+
 	DB_SERVER		: "127.0.0.1",
 	DB_USER			: "auth",
 	DB_PASSWORD		: fs.readFileSync("passwords/auth.db.password","ascii").trim(),

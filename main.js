@@ -489,7 +489,9 @@ function log(color, msg)
 {
 	const message = new Date() + " | " + msg;
 
-	if (color === "red") {
+	// error or info
+
+	if (color === "red" || color === "white") {
 		send_telegram(message);
 	}
 
@@ -4423,6 +4425,8 @@ if (cluster.isMaster)
 			"sendfd exec proc"
 		);
 	}
+
+	log("white","Auth server started !");
 }
 else
 {

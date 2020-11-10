@@ -40,7 +40,7 @@ const unveil			= is_openbsd ? require("openbsd-unveil"): null;
 const is_dev_env		= process.env.NODE_ENV === "development";
 const config			= require (is_dev_env ? "./config-dev" : "./config-prod");
 
-const slimbot			= new Slimbot(config.TELEGRAM_APIKEY);
+const slimbot			= new Slimbot(config.BOT_TELEGRAM_APIKEY);
 
 // async postgres connection
 const pool = new Pool ({
