@@ -11,7 +11,6 @@ tasks:
     cd /home/datasetu-auth-server/test
     doas chmod 775 .
     doas chmod 775 ../passwords/auth.db.password
-    doas chmod 775 ../rzpay.key.secret
     export AUTH_SERVER='localhost'
     doas /home/datasetu-auth-server/test/set-local.sh
     ./run
