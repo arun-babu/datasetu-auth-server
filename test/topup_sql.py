@@ -26,12 +26,12 @@ def topup_function(request, credentials):
 
         amount      = int(request['amount'])
         now         = time.time()
-        invoice_id  = 'inv_' + str(int(now)) 
+        invoice_id  = 'inv_' + str(int(now))
 
         with open("../passwords/auth.db.password", "r") as f:
                 pg_password = f.read().strip()
 
-        conn_string = "host='localhost' dbname='postgres' user='auth' password='" + pg_password + "'" 
+        conn_string = "host='localhost' dbname='postgres' user='auth' password='" + pg_password + "'"
 
         try:
                 conn = psycopg2.connect(conn_string)
@@ -51,8 +51,7 @@ def topup_function(request, credentials):
                 return {}
 
         # form invoice, invoice signature
-        with open("../rzpay.key.secret", "r") as f:
-                key_secret = f.read().strip()
+	key_secret = "your-razorpay-key-secret" 
 
         resp = {'razorpay_invoice_id': invoice_id,'razorpay_invoice_status': 'paid', \
                 'razorpay_payment_id':'pay_DaCTRWQeB2X5bI', 'razorpay_invoice_receipt':'TS1988'}

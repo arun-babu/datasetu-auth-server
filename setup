@@ -47,16 +47,7 @@ do
 	sed -i "s/XXX_$label/$password/" schema.sql 
 done
 
-#Not needed anymore. Using config-prod.js
-#echo your-telegram-api-key		> telegram.apikey
-#echo your-telegram-chat-id		> telegram.chatid
-#
-#echo your-razorpay-key-id		> rzpay.key.id
-#echo your-razorpay-key-secret		> rzpay.key.secret
-
-#chmod 400 telegram.*
 chmod 400 *.sql
-#chmod 400 rzpay.*
 
 # setup postgresql
 

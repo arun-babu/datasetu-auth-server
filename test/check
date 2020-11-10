@@ -1,2 +1,1 @@
-pylint -E auth.py
-pylint -E test*.py
+pylint -E *.py
