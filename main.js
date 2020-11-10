@@ -47,9 +47,7 @@ const compression		= require("compression");
 const http_request		= require("request");
 
 const is_dev_env		= process.env.NODE_ENV === "development";
-const config			= is_dev_env
-				    ? require("./config-dev")
-				    : require("./config-prod")
+const config			= require (is_dev_env ? "./config-dev" : "./config-prod");
 
 const pgNativeClient		= require("pg-native");
 const pg			= new pgNativeClient();
@@ -67,131 +65,137 @@ const MIN_TOKEN_HASH_LEN	= 64;
 const MAX_TOKEN_HASH_LEN	= 64;
 const MAX_SAFE_STRING_LEN	= 512;
 
-const SYSTEM_TRUSTED_CERTS	= is_openbsd
-				    ? "/etc/ssl/cert.pem" 
-				    : "/etc/ssl/certs/ca-certificates.crt";
+const SYSTEM_TRUSTED_CERTS	= is_openbsd ?
+					"/etc/ssl/cert.pem" :
+					"/etc/ssl/certs/ca-certificates.crt";
 
 const CA_CERT_PATH		= "ca.datasetu.org.crt";
 
-const TRUSTED_CAs		=   [
+const TRUSTED_CAs		= Object.freeze ([
+
 					fs.readFileSync(CA_CERT_PATH),
 					fs.readFileSync(SYSTEM_TRUSTED_CERTS),
-			    		fs.readFileSync("CCAIndia2015.cer"),
-			    		fs.readFileSync("CCAIndia2014.cer")
-				    ];
-
+					fs.readFileSync("CCAIndia2015.cer"),
+					fs.readFileSync("CCAIndia2014.cer")
+]);
 
 const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
-				    /* resource server API */
-					"/auth/v1/token/introspect"		: 1,
-					"/auth/v1/certificate-info"		: 1,
-					    
-				    /* data consumer's APIs */
-					"/auth/v1/token"			: 2,
-					    
-				    /* for credit topup */
-					"/marketplace/topup-success"		: 2,
-					    
-				    /* static files for marketplace */
-					"/marketplace/topup.html"		: 2,
-					"/marketplace/marketplace.js"		: 2,
-					"/marketplace/marketplace.css"		: 2,
-					    
-				    /* marketplace APIs */
-					"/marketplace/v1/credit/info"		: 2,
-					"/marketplace/v1/credit/topup"		: 2,
-					"/marketplace/v1/confirm-payment"	: 2,
-					"/marketplace/v1/audit/credits"		: 2,
-					"/marketplace/v1/credit/transfer"	: 3,
-					    
-				    /* data provider's APIs */
-					"/auth/v1/audit/tokens"			: 3,
-					    
-					"/auth/v1/token/revoke"			: 3,
-					"/auth/v1/token/revoke-all"		: 3,
-					    
-					"/auth/v1/acl"				: 3,
-					"/auth/v1/acl/set"			: 3,
-					"/auth/v1/acl/revert"			: 3,
-					"/auth/v1/acl/append"			: 3,
-					    
-					"/auth/v1/group/add"			: 3,
-					"/auth/v1/group/delete"			: 3,
-					"/auth/v1/group/list"			: 3,
-				    });
 
-const HTTPS_OPTIONS		= Object.freeze ({
-					key		    : fs.readFileSync("https-key.pem"),
-					cert		    : fs.readFileSync("https-certificate.pem"),
-					ca		    : TRUSTED_CAs,
-					requestCert	    : true,
-					rejectUnauthorized  : true,
-				    });
+	/* resource server API */
+		"/auth/v1/token/introspect"		: 1,
+		"/auth/v1/certificate-info"		: 1,
 
-const STATIC_PAGES		= Object.freeze ({
-				    /* GET end points */
-					
-					"/marketplace/topup.html"	: fs.readFileSync (
-									    "static/topup.html",	    "ascii"
-								    ),
-					
-					"/marketplace/marketplace.js"   : fs.readFileSync (
-									    "static/marketplace.js",	    "ascii"
-								    ),
-					
-					"/marketplace/marketplace.css"  : fs.readFileSync (
-									    "static/marketplace.css",	    "ascii"
-								    ),
-					
-				    /* templates */
-					
-					"topup-success-1.html"		: fs.readFileSync (
-									    "static/topup-success-1.html",  "ascii"
-								    ),
-					"topup-success-2.html"		: fs.readFileSync (
-									    "static/topup-success-2.html",  "ascii"
-								    ),
-					"topup-failure-1.html"		: fs.readFileSync (
-									    "static/topup-failure-1.html",  "ascii"
-								    ),
-					"topup-failure-2.html"		: fs.readFileSync (
-									    "static/topup-failure-2.html",  "ascii"
-								    ),
-				    });
+	/* data consumer's APIs */
+		"/auth/v1/token"			: 2,
 
-const MIME_TYPE			= Object.freeze	({
-					"js"	: "text/javascript",
-					"css"	: "text/css",
-					"html"	: "text/html"
-				    });
+	/* for credit topup */
+		"/marketplace/topup-success"		: 2,
 
-const TOPUP_SUCCESS_1		= STATIC_PAGES["topup-success-1.html"];
-const TOPUP_SUCCESS_2		= STATIC_PAGES["topup-success-2.html"];
-const TOPUP_FAILURE_1 		= STATIC_PAGES["topup-failure-1.html"];
-const TOPUP_FAILURE_2 		= STATIC_PAGES["topup-failure-2.html"]
+	/* static files for marketplace */
+		"/marketplace/topup.html"		: 2,
+		"/marketplace/marketplace.js"		: 2,
+		"/marketplace/marketplace.css"		: 2,
 
-const TELEGRAM_URL		= config.TELEGRAM 
-				    + "/bot" 
-				    + config.TELEGRAM_APIKEY 
-				    + "/sendMessage?chat_id="	
-				    + config.TELEGRAM_CHAT_ID 
-				    + "&text=";
+	/* marketplace APIs */
+		"/marketplace/v1/credit/info"		: 2,
+		"/marketplace/v1/credit/topup"		: 2,
+		"/marketplace/v1/confirm-payment"	: 2,
+		"/marketplace/v1/audit/credits"		: 2,
+		"/marketplace/v1/credit/transfer"	: 3,
 
-const SYNC_CONN_STR		= "postgresql://" + config.DB_USER 
-				    + ":" 
-				    + config.DB_PASSWORD
-				    + "@" 
-				    + config.DB_SERVER 
-				    + ":5432/postgres";
+	/* data provider's APIs */
+		"/auth/v1/audit/tokens"			: 3,
 
-const RZPAY_URL			= "https://"
-				    + config.RZPAY_KEY_ID
-				    + ":"
-				    + config.RZPAY_KEY_SECRET
-				    + "@api.razorpay.com/v1/invoices/";
+		"/auth/v1/token/revoke"			: 3,
+		"/auth/v1/token/revoke-all"		: 3,
+
+		"/auth/v1/acl"				: 3,
+		"/auth/v1/acl/set"			: 3,
+		"/auth/v1/acl/revert"			: 3,
+		"/auth/v1/acl/append"			: 3,
+
+		"/auth/v1/group/add"			: 3,
+		"/auth/v1/group/delete"			: 3,
+		"/auth/v1/group/list"			: 3,
+});
+
+const HTTPS_OPTIONS = Object.freeze ({
+		key			: fs.readFileSync("https-key.pem"),
+		cert			: fs.readFileSync("https-certificate.pem"),
+		ca			: TRUSTED_CAs,
+		requestCert		: true,
+		rejectUnauthorized	: true
+});
+
+const STATIC_PAGES = Object.freeze ({
+	/* GET end points */
+
+		"/marketplace/topup.html"	: fs.readFileSync (
+			"static/topup.html", "ascii"
+		),
+
+		"/marketplace/marketplace.js"	: fs.readFileSync (
+			"static/marketplace.js", "ascii"
+		),
+
+		"/marketplace/marketplace.css"	: fs.readFileSync (
+			"static/marketplace.css", "ascii"
+		),
+
+	/* templates */
+
+		"topup-success-1.html"	: fs.readFileSync (
+			"static/topup-success-1.html", "ascii"
+		),
+
+		"topup-success-2.html"	: fs.readFileSync (
+			"static/topup-success-2.html", "ascii"
+		),
+
+		"topup-failure-1.html"	: fs.readFileSync (
+			"static/topup-failure-1.html", "ascii"
+		),
+
+		"topup-failure-2.html"	: fs.readFileSync (
+			"static/topup-failure-2.html", "ascii"
+		),
+});
+
+const MIME_TYPE	= Object.freeze	({
+
+		"js"	: "text/javascript",
+		"css"	: "text/css",
+		"html"	: "text/html"
+});
+
+const TOPUP_SUCCESS_1	= STATIC_PAGES["topup-success-1.html"];
+const TOPUP_SUCCESS_2	= STATIC_PAGES["topup-success-2.html"];
+const TOPUP_FAILURE_1	= STATIC_PAGES["topup-failure-1.html"];
+const TOPUP_FAILURE_2	= STATIC_PAGES["topup-failure-2.html"];
+
+const TELEGRAM_URL	= config.TELEGRAM			+
+				"/bot"				+
+					config.TELEGRAM_APIKEY	+
+				"/sendMessage?chat_id="		+
+					config.TELEGRAM_CHAT_ID	+
+				"&text=";
+
+const SYNC_CONN_STR	= "postgresql://"			+
+					config.DB_USER		+
+				":"				+
+					config.DB_PASSWORD	+
+				"@"				+
+					config.DB_SERVER	+
+				":5432/postgres";
+
+const RZPAY_URL		= "https://"				+
+					config.RZPAY_KEY_ID	+
+				":"				+
+					config.RZPAY_KEY_SECRET	+
+				"@api.razorpay.com/v1/invoices/";
 
 
-process.env.TZ = "Asia/Kolkata";
+process.env.TZ		= "Asia/Kolkata";
 
 /* --- dns --- */
 
@@ -225,12 +229,11 @@ const pool = new Pool ({
 
 pool.connect();
 
-pg.connectSync (SYNC_CONN_STR,
-		(err) =>
+pg.connectSync (SYNC_CONN_STR, (err) =>
 		{
-		    if (err) {
-			throw err;
-		    }
+			if (err) {
+				throw err;
+			}
 		}
 );
 
@@ -332,16 +335,8 @@ function is_valid_token (token, user = null)
 	const issued_to		= split[1];
 	const random_hex	= split[2];
 
-	if (!is_dev_env)
-	{
-	    if (issued_by !== config.SERVER_NAME)
+	if (issued_by !== config.SERVER_NAME)
 		return false;
-	}
-	else
-	{   
-	    if (!config.ALLOWED_SERVER_NAMES.includes(issued_by))
-		return false;
-	}
 
 	if (random_hex.length !== TOKEN_LEN_HEX)
 		return false;
@@ -736,17 +731,8 @@ function is_secure (req, res, cert, validate_email = true)
 	res.header("X-Content-Type-Options",	"nosniff");
 
 
-	if (!is_dev_env)
-	{
-	    if (req.headers.host && req.headers.host !== config.SERVER_NAME)
+	if (req.headers.host && req.headers.host !== config.SERVER_NAME)
 		return "Invalid 'host' field in the header";
-	}
-	else
-	{
-	    if (req.headers.host && !config.ALLOWED_SERVER_NAMES.includes(req.headers.host))
-		return "Invalid 'host' field in the header";
-	}
-
 
 	if (req.headers.origin)
 	{
@@ -931,8 +917,7 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	//Add : for port numbers
-	exceptions = exceptions + (is_dev_env ? ":" : "") + "-/.@";
+	exceptions = exceptions + "-/.@:";
 
 	for (const ch of str)
 	{
@@ -3242,7 +3227,7 @@ app.post("/auth/v[1-2]/audit/tokens", (req, res) => {
 				);
 
 				/* return only resource IDs belonging to provider
-				   who requested audit */
+					who requested audit */
 
 				let filtered_request = [];
 
@@ -3530,7 +3515,7 @@ app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
 					" AND cert_fingerprint = $2::text"	+
 					" AND cert_serial = $3::text";
 
-	let serial 	= "*";
+	let serial	= "*";
 	let fingerprint	= "*";
 
 	if (cert_class < 3) // get the real serial and fingerprint
@@ -3561,7 +3546,7 @@ app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
 
 		if (cert_class < 3)
 		{
-			response.credits 		= results.rows[0].amount;
+			response.credits		= results.rows[0].amount;
 			response["last-updated"]	= results.rows[0].last_updated;
 
 			return SUCCESS (res, response);
@@ -3579,7 +3564,7 @@ app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
 			{
 				if (row.cert_serial === "*" && row.cert_fingerprint === "*")
 				{
-					response.credits 		= results.rows[0].amount;
+					response.credits		= results.rows[0].amount;
 					response["last-updated"]	= results.rows[0].last_updated;
 				}
 				else
@@ -3642,7 +3627,7 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 		*/
 
 		serial		= "*";
-		fingerprint 	= "*";
+		fingerprint	= "*";
 
 		if (body.serial && body.fingerprint)
 		{
@@ -3941,8 +3926,8 @@ app.get("/marketplace/topup-success", (req, res) => {
 
 app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
 
-	const id	    	= res.locals.email;
-	const body	    	= res.locals.body;
+	const id		= res.locals.email;
+	const body	= res.locals.body;
 	const cert		= res.locals.cert;
 	const cert_class	= res.locals.cert_class;
 
@@ -4037,8 +4022,8 @@ app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
 
 app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 
-	const id	    	= res.locals.email;
-	const body	    	= res.locals.body;
+	const id		= res.locals.email;
+	const body		= res.locals.body;
 	const cert		= res.locals.cert;
 	const cert_class	= res.locals.cert_class;
 
@@ -4071,9 +4056,9 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 		"SELECT amount,time,invoice_number"		+
 			" FROM topup_transaction"		+
 			" WHERE id = $1::text"			+
-			" AND cert_serial = $2::text" 		+
+			" AND cert_serial = $2::text"		+
 			" AND cert_fingerprint = $3::text"	+
-			" AND paid = true"	 		+
+			" AND paid = true"			+
 			" AND time >= (NOW() - $4::interval) ",
 		[
 			id,
@@ -4182,7 +4167,7 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 
 	const id	= res.locals.email;
-	const body    	= res.locals.body;
+	const body	= res.locals.body;
 
 	if (! body["from-fingerprint"])
 		return ERROR (res, 400, "'from-fingerprint' field not found in body");
@@ -4222,7 +4207,7 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 	pool.query (
 
 		"SELECT amount FROM credit"	+
-		" WHERE id = $1::text" 		+
+		" WHERE id = $1::text"		+
 		" AND cert_serial = $2::text"	+
 		" AND amount >=  $3::numeric",
 		[
@@ -4345,13 +4330,6 @@ if (! is_openbsd)
 
 function drop_worker_privileges()
 {
-	//Since there was only one password (password.DB), it has been moved to config.DB_PASSWORD
-	//for (const k in password)
-	//{
-	//	password[k] = null;
-	//	delete password[k];	// forget all passwords
-	//}
-
 	if (is_openbsd)
 	{
 		if (EUID === 0)
@@ -4454,8 +4432,7 @@ else
 {
 	https.createServer(HTTPS_OPTIONS,app).listen(443,"0.0.0.0");
 
-	if (!is_dev_env)
-	    drop_worker_privileges();
+	drop_worker_privileges();
 
 	log("green","Worker started with pid " + process.pid);
 }

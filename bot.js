@@ -23,7 +23,6 @@
 
 "use strict";
 
-const fs			= require("fs");
 const os			= require("os");
 const Pool			= require("pg").Pool;
 const lodash			= require("lodash");
@@ -39,9 +38,7 @@ const pledge			= is_openbsd ? require("node-pledge")	: null;
 const unveil			= is_openbsd ? require("openbsd-unveil"): null;
 
 const is_dev_env		= process.env.NODE_ENV === "development";
-const config			= is_dev_env
-				    ? require("./config-dev")
-				    : require("./config-prod")
+const config			= require (is_dev_env ? "./config-dev" : "./config-prod");
 
 const slimbot			= new Slimbot(config.TELEGRAM_APIKEY);
 
