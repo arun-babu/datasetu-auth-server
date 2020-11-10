@@ -8,13 +8,13 @@ do
 	sleep 1
 done
 
-dir="/home/iudx-auth-server"                                               
+dir="/home/datasetu-auth-server"                                               
 $dir/run.tmux                                                                   
 $dir/run.bot.tmux                                                               
 $dir/run.crl.tmux                                                               
 
-telegram_apikey=`cat $dir/telegram.apikey`                                      
-telegram_chat_id=`cat $dir/telegram.chatid`                                     
+telegram_apikey=`grep TELEGRAM_APIKEY $dir/config-prod.js | grep -o "\".*\"," | tr -d '",'`                                      
+telegram_chat_id=`grep TELEGRAM_CHAT_ID $dir/config-prod.js | grep -o "\".*\"," | tr -d '",'`                                     
 
 hostname=`hostname`
 

@@ -39,9 +39,9 @@ def topup_function(request, credentials):
         except psycopg2.DatabaseError as error:
                 return {}
 
-        cursor = conn.cursor()
-        query = "INSERT INTO topup_transaction VALUES (%s,%s,%s,%s,to_timestamp(%s),%s,false,'{}'::jsonb);"
-        params = (email,serial,fingerprint,amount,now,invoice_id)
+        cursor  = conn.cursor()
+        query   = "INSERT INTO topup_transaction VALUES (%s,%s,%s,%s,to_timestamp(%s),%s,false,'{}'::jsonb);"
+        params  = (email,serial,fingerprint,amount,now,invoice_id)
 
         try:
                 cursor.execute(query, params)

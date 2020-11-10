@@ -46,88 +46,150 @@ const bodyParser		= require("body-parser");
 const compression		= require("compression");
 const http_request		= require("request");
 
+const is_dev_env		= process.env.NODE_ENV === "development";
+const config			= is_dev_env
+				    ? require("./config-dev")
+				    : require("./config-prod")
+
 const pgNativeClient		= require("pg-native");
 const pg			= new pgNativeClient();
-
-const TOKEN_LEN			= 16;
-const TOKEN_LEN_HEX		= 2 * TOKEN_LEN;
 
 const EUID			= process.geteuid();
 const is_openbsd		= os.type() === "OpenBSD";
 const pledge			= is_openbsd ? require("node-pledge")	: null;
 const unveil			= is_openbsd ? require("openbsd-unveil"): null;
 
+const TOKEN_LEN			= 16;
+const TOKEN_LEN_HEX		= 32;
 const NUM_CPUS			= os.cpus().length;
-const SERVER_NAME		= fs.readFileSync ("server.name","ascii").trim();
-const DOCUMENTATION_LINK	= fs.readFileSync ("documentation.link","ascii").trim();
-
 const MAX_TOKEN_TIME		= 31536000; // in seconds (1 year)
-
 const MIN_TOKEN_HASH_LEN	= 64;
 const MAX_TOKEN_HASH_LEN	= 64;
-
 const MAX_SAFE_STRING_LEN	= 512;
 
+const SYSTEM_TRUSTED_CERTS	= is_openbsd
+				    ? "/etc/ssl/cert.pem" 
+				    : "/etc/ssl/certs/ca-certificates.crt";
+
+const CA_CERT_PATH		= "ca.datasetu.org.crt";
+
+const TRUSTED_CAs		=   [
+					fs.readFileSync(CA_CERT_PATH),
+					fs.readFileSync(SYSTEM_TRUSTED_CERTS),
+			    		fs.readFileSync("CCAIndia2015.cer"),
+			    		fs.readFileSync("CCAIndia2014.cer")
+				    ];
+
+
 const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
+				    /* resource server API */
+					"/auth/v1/token/introspect"		: 1,
+					"/auth/v1/certificate-info"		: 1,
+					    
+				    /* data consumer's APIs */
+					"/auth/v1/token"			: 2,
+					    
+				    /* for credit topup */
+					"/marketplace/topup-success"		: 2,
+					    
+				    /* static files for marketplace */
+					"/marketplace/topup.html"		: 2,
+					"/marketplace/marketplace.js"		: 2,
+					"/marketplace/marketplace.css"		: 2,
+					    
+				    /* marketplace APIs */
+					"/marketplace/v1/credit/info"		: 2,
+					"/marketplace/v1/credit/topup"		: 2,
+					"/marketplace/v1/confirm-payment"	: 2,
+					"/marketplace/v1/audit/credits"		: 2,
+					"/marketplace/v1/credit/transfer"	: 3,
+					    
+				    /* data provider's APIs */
+					"/auth/v1/audit/tokens"			: 3,
+					    
+					"/auth/v1/token/revoke"			: 3,
+					"/auth/v1/token/revoke-all"		: 3,
+					    
+					"/auth/v1/acl"				: 3,
+					"/auth/v1/acl/set"			: 3,
+					"/auth/v1/acl/revert"			: 3,
+					"/auth/v1/acl/append"			: 3,
+					    
+					"/auth/v1/group/add"			: 3,
+					"/auth/v1/group/delete"			: 3,
+					"/auth/v1/group/list"			: 3,
+				    });
 
-/* resource server API */
-	"/auth/v1/token/introspect"		: 1,
-	"/auth/v1/certificate-info"		: 1,
+const HTTPS_OPTIONS		= Object.freeze ({
+					key		    : fs.readFileSync("https-key.pem"),
+					cert		    : fs.readFileSync("https-certificate.pem"),
+					ca		    : TRUSTED_CAs,
+					requestCert	    : true,
+					rejectUnauthorized  : true,
+				    });
 
-/* data consumer's APIs */
-	"/auth/v1/token"			: 2,
+const STATIC_PAGES		= Object.freeze ({
+				    /* GET end points */
+					
+					"/marketplace/topup.html"	: fs.readFileSync (
+									    "static/topup.html",	    "ascii"
+								    ),
+					
+					"/marketplace/marketplace.js"   : fs.readFileSync (
+									    "static/marketplace.js",	    "ascii"
+								    ),
+					
+					"/marketplace/marketplace.css"  : fs.readFileSync (
+									    "static/marketplace.css",	    "ascii"
+								    ),
+					
+				    /* templates */
+					
+					"topup-success-1.html"		: fs.readFileSync (
+									    "static/topup-success-1.html",  "ascii"
+								    ),
+					"topup-success-2.html"		: fs.readFileSync (
+									    "static/topup-success-2.html",  "ascii"
+								    ),
+					"topup-failure-1.html"		: fs.readFileSync (
+									    "static/topup-failure-1.html",  "ascii"
+								    ),
+					"topup-failure-2.html"		: fs.readFileSync (
+									    "static/topup-failure-2.html",  "ascii"
+								    ),
+				    });
 
-/* for credit topup */
-	"/marketplace/topup-success"		: 2,
+const MIME_TYPE			= Object.freeze	({
+					"js"	: "text/javascript",
+					"css"	: "text/css",
+					"html"	: "text/html"
+				    });
 
-/* static files for marketplace */
-	"/marketplace/topup.html"		: 2,
-	"/marketplace/marketplace.js"		: 2,
-	"/marketplace/marketplace.css"		: 2,
+const TOPUP_SUCCESS_1		= STATIC_PAGES["topup-success-1.html"];
+const TOPUP_SUCCESS_2		= STATIC_PAGES["topup-success-2.html"];
+const TOPUP_FAILURE_1 		= STATIC_PAGES["topup-failure-1.html"];
+const TOPUP_FAILURE_2 		= STATIC_PAGES["topup-failure-2.html"]
 
-/* marketplace APIs */
-	"/marketplace/v1/credit/info"		: 2,
-	"/marketplace/v1/credit/topup"		: 2,
-	"/marketplace/v1/confirm-payment"	: 2,
-	"/marketplace/v1/audit/credits"		: 2,
+const TELEGRAM_URL		= config.TELEGRAM 
+				    + "/bot" 
+				    + config.TELEGRAM_APIKEY 
+				    + "/sendMessage?chat_id="	
+				    + config.TELEGRAM_CHAT_ID 
+				    + "&text=";
 
-	"/marketplace/v1/credit/transfer"	: 3,
+const SYNC_CONN_STR		= "postgresql://" + config.DB_USER 
+				    + ":" 
+				    + config.DB_PASSWORD
+				    + "@" 
+				    + config.DB_SERVER 
+				    + ":5432/postgres";
 
-/* data provider's APIs */
-	"/auth/v1/audit/tokens"			: 3,
+const RZPAY_URL			= "https://"
+				    + config.RZPAY_KEY_ID
+				    + ":"
+				    + config.RZPAY_KEY_SECRET
+				    + "@api.razorpay.com/v1/invoices/";
 
-	"/auth/v1/token/revoke"			: 3,
-	"/auth/v1/token/revoke-all"		: 3,
-
-	"/auth/v1/acl"				: 3,
-	"/auth/v1/acl/set"			: 3,
-	"/auth/v1/acl/revert"			: 3,
-	"/auth/v1/acl/append"			: 3,
-
-	"/auth/v1/group/add"			: 3,
-	"/auth/v1/group/delete"			: 3,
-	"/auth/v1/group/list"			: 3,
-});
-
-const WHITELISTED_DOMAINS	= fs.readFileSync("whitelist.domains","ascii").trim().split("\n");
-const WHITELISTED_ENDSWITH	= fs.readFileSync("whitelist.endswith","ascii").trim().split("\n");
-
-const LAUNCH_ADMIN_PANEL	= fs.readFileSync("admin.panel","ascii").trim() === "yes";
-
-/* --- API statistics --- */
-
-const statistics = {
-
-	"start_time"	: 0,
-
-	"api"		: {
-		"count" : {
-			"invalid-api" : 0
-		}
-	}
-};
-
-/* --- environment variables--- */
 
 process.env.TZ = "Asia/Kolkata";
 
@@ -141,55 +203,34 @@ dns.setServers ([
 	"[2001:4860:4860::8844]",
 ]);
 
-/* --- telegram --- */
+const statistics = {
 
-const TELEGRAM		= "https://api.telegram.org";
+	"start_time"	: 0,
 
-const telegram_apikey	= fs.readFileSync ("telegram.apikey","ascii").trim();
-const telegram_chat_id	= fs.readFileSync ("telegram.chatid","ascii").trim();
-
-const telegram_url	= TELEGRAM + "/bot" + telegram_apikey +
-				"/sendMessage?chat_id="	+ telegram_chat_id +
-				"&text=";
-
-/* --- postgres --- */
-
-const DB_SERVER	= "127.0.0.1";
-
-const password	= {
-	"DB"	: fs.readFileSync("passwords/auth.db.password","ascii").trim(),
+	"api"		: {
+		"count" : {
+			"invalid-api" : 0
+		}
+	}
 };
-
-/* --- razorpay --- */
-
-const rzpay_key_id	= fs.readFileSync("rzpay.key.id",	"ascii").trim();
-const rzpay_key_secret	= fs.readFileSync("rzpay.key.secret",	"ascii").trim();
-
-const rzpay_url		= "https://"					+
-					rzpay_key_id			+
-						":"			+
-					rzpay_key_secret		+
-				"@api.razorpay.com/v1/invoices/";
 
 // async postgres connection
 const pool = new Pool ({
-	host		: DB_SERVER,
+	host		: config.DB_SERVER,
 	port		: 5432,
-	user		: "auth",
+	user		: config.DB_USER,
 	database	: "postgres",
-	password	: password.DB,
+	password	: config.DB_PASSWORD,
 });
 
 pool.connect();
 
-// sync postgres connection
-pg.connectSync (
-	"postgresql://auth:"+ password.DB + "@" + DB_SERVER + ":5432/postgres",
+pg.connectSync (SYNC_CONN_STR,
 		(err) =>
 		{
-			if (err) {
-				throw err;
-			}
+		    if (err) {
+			throw err;
+		    }
 		}
 );
 
@@ -275,76 +316,6 @@ const apertureOpts = {
 const parser	= aperture.createParser		(apertureOpts);
 const evaluator	= aperture.createEvaluator	(apertureOpts);
 
-/* --- https --- */
-
-const system_trusted_certs = is_openbsd ?
-					"/etc/ssl/cert.pem" :
-					"/etc/ssl/certs/ca-certificates.crt";
-
-const trusted_CAs = [
-	fs.readFileSync("ca.datasetu.org.crt"),
-	fs.readFileSync(system_trusted_certs),
-	fs.readFileSync("CCAIndia2015.cer"),
-	fs.readFileSync("CCAIndia2014.cer")
-];
-
-const https_options = Object.freeze ({
-	key			: fs.readFileSync("https-key.pem"),
-	cert			: fs.readFileSync("https-certificate.pem"),
-	ca			: trusted_CAs,
-	requestCert		: true,
-	rejectUnauthorized	: true,
-});
-
-/* --- static pages --- */
-
-const STATIC_PAGES = Object.freeze ({
-
-/* GET end points */
-
-	"/marketplace/topup.html":
-				fs.readFileSync (
-					"static/topup.html",		"ascii"
-				),
-
-	"/marketplace/marketplace.js":
-				fs.readFileSync (
-					"static/marketplace.js",	"ascii"
-				),
-
-	"/marketplace/marketplace.css":
-				fs.readFileSync (
-					"static/marketplace.css",	"ascii"
-				),
-
-/* templates */
-
-	"topup-success-1.html"	: fs.readFileSync (
-					"static/topup-success-1.html",	"ascii"
-				),
-	"topup-success-2.html"	: fs.readFileSync (
-					"static/topup-success-2.html",	"ascii"
-				),
-	"topup-failure-1.html"	: fs.readFileSync (
-					"static/topup-failure-1.html",	"ascii"
-				),
-	"topup-failure-2.html"	: fs.readFileSync (
-					"static/topup-failure-2.html",	"ascii"
-				),
-});
-
-const MIME_TYPE = Object.freeze({
-
-	"js"	: "text/javascript",
-	"css"	: "text/css",
-	"html"	: "text/html"
-});
-
-const topup_success_1 = STATIC_PAGES["topup-success-1.html"];
-const topup_success_2 = STATIC_PAGES["topup-success-2.html"];
-
-const topup_failure_1 = STATIC_PAGES["topup-failure-1.html"];
-const topup_failure_2 = STATIC_PAGES["topup-failure-2.html"];
 
 /* --- functions --- */
 function is_valid_token (token, user = null)
@@ -361,8 +332,16 @@ function is_valid_token (token, user = null)
 	const issued_to		= split[1];
 	const random_hex	= split[2];
 
-	if (issued_by !== SERVER_NAME)
+	if (!is_dev_env)
+	{
+	    if (issued_by !== config.SERVER_NAME)
 		return false;
+	}
+	else
+	{   
+	    if (!config.ALLOWED_SERVER_NAMES.includes(issued_by))
+		return false;
+	}
 
 	if (random_hex.length !== TOKEN_LEN_HEX)
 		return false;
@@ -445,7 +424,7 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 		if (results.rows.length === 0)
 			return send_telegram ("No chat id for : " + telegram_id + " : provider " + provider_id);
 
-		const url		= TELEGRAM + "/bot" + telegram_apikey + "/sendMessage";
+		const url		= config.TELEGRAM + "/bot" + config.TELEGRAM_APIKEY + "/sendMessage";
 
 		const split		= request.id.split("/");
 		const resource		= split.slice(2).join("/");
@@ -497,7 +476,7 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 
 function send_telegram (message)
 {
-	http_request ( telegram_url + "[ AUTH ] : " + message, (error, response, body) =>
+	http_request ( TELEGRAM_URL + "[ AUTH ] : " + message, (error, response, body) =>
 	{
 		if (error)
 		{
@@ -756,8 +735,18 @@ function is_secure (req, res, cert, validate_email = true)
 	res.header("X-XSS-Protection",		"1; mode=block");
 	res.header("X-Content-Type-Options",	"nosniff");
 
-	if (req.headers.host && req.headers.host !== SERVER_NAME)
+
+	if (!is_dev_env)
+	{
+	    if (req.headers.host && req.headers.host !== config.SERVER_NAME)
 		return "Invalid 'host' field in the header";
+	}
+	else
+	{
+	    if (req.headers.host && !config.ALLOWED_SERVER_NAMES.includes(req.headers.host))
+		return "Invalid 'host' field in the header";
+	}
+
 
 	if (req.headers.origin)
 	{
@@ -768,7 +757,7 @@ function is_secure (req, res, cert, validate_email = true)
 		if (! origin.startsWith("https://"))
 		{
 			// allow the server itself to host "http"
-			if (origin !== "http://" + SERVER_NAME)
+			if (origin !== "http://" + config.SERVER_NAME)
 				return "Insecure 'origin' field";
 		}
 
@@ -783,13 +772,13 @@ function is_secure (req, res, cert, validate_email = true)
 
 		let whitelisted = false;
 
-		if (WHITELISTED_DOMAINS.indexOf(origin_domain) >= 0)
+		if (config.WHITELISTED_DOMAINS.indexOf(origin_domain) >= 0)
 		{
 			whitelisted = true;
 		}
 		else
 		{
-			for (const w of WHITELISTED_ENDSWITH)
+			for (const w of config.WHITELISTED_ENDSWITH)
 			{
 				if (origin_domain.endsWith(w))
 				{
@@ -942,7 +931,8 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	exceptions = exceptions + "-/.@";
+	//Add : for port numbers
+	exceptions = exceptions + (is_dev_env ? ":" : "") + "-/.@";
 
 	for (const ch of str)
 	{
@@ -1043,7 +1033,7 @@ function basic_security_check (req, res, next)
 	const api			= endpoint.replace(/\/v[1-2]\//,"/v1/");
 	const min_class_required	= MIN_CERT_CLASS_REQUIRED[api];
 
-	if (LAUNCH_ADMIN_PANEL)
+	if (config.LAUNCH_ADMIN_PANEL)
 		process.send(endpoint);
 
 	if (! min_class_required)
@@ -1051,7 +1041,7 @@ function basic_security_check (req, res, next)
 		return ERROR (
 			res, 404,
 				"No such page/API. Please visit : "	+
-				DOCUMENTATION_LINK + " for documentation."
+				config.DOCUMENTATION_LINK + " for documentation."
 		);
 	}
 
@@ -2043,7 +2033,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 	/* Token format = issued-by / issued-to / random-hex-string */
 
-	const token	= SERVER_NAME + "/" + consumer_id + "/" + random_hex;
+	const token	= config.SERVER_NAME + "/" + consumer_id + "/" + random_hex;
 
 	const response	= {
 
@@ -3670,7 +3660,7 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 	const now		= Math.floor (Date.now() / 1000);
 	const expire		= now + 1800; // after 30 mins
 
-	const success_url	= "https://" + SERVER_NAME + "/marketplace/topup-success";
+	const success_url	= "https://" + config.SERVER_NAME + "/marketplace/topup-success";
 
 	const first_name	= cert.subject.GN || "Unknown";
 	const last_name		= cert.subject.SN || "unknown";
@@ -3696,7 +3686,7 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 	};
 
 	const options = {
-		url	: rzpay_url,
+		url	: RZPAY_URL,
 		headers	: {"Content-Type": "application/json"},
 		json	: true,
 		body	: post_body
@@ -3795,7 +3785,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 				");"					+
 			"</script>";
 
-		const page = topup_failure_1 + response_mid + topup_failure_2;
+		const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 		res.setHeader("Content-Type", "text/html");
 		res.status(400).end(page);
@@ -3811,7 +3801,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 	].join("|");
 
 	const expected_signature = crypto
-					.createHmac("sha256",rzpay_key_secret)
+					.createHmac("sha256",config.RZPAY_KEY_SECRET)
 					.update(payload)
 					.digest("hex");
 
@@ -3840,7 +3830,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 				");"					+
 			"</script>";
 
-		const page = topup_failure_1 + response_mid + topup_failure_2;
+		const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 		res.setHeader("Content-Type", "text/html");
 		res.status(400).end(page);
@@ -3886,7 +3876,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 					");"					+
 				"</script>";
 
-			const page = topup_failure_1 + response_mid + topup_failure_2;
+			const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 			res.setHeader("Content-Type", "text/html");
 			res.status(400).end(page);
@@ -3916,7 +3906,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 					");"					+
 				"</script>";
 
-			const page = topup_failure_1 + response_mid + topup_failure_2;
+			const page = TOPUP_FAILURE_1 + response_mid + TOPUP_FAILURE_2;
 
 			res.setHeader("Content-Type", "text/html");
 			res.status(400).end(page);
@@ -3942,7 +3932,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 					");"					+
 				"</script>";
 
-		const page = topup_success_1 + response_mid + topup_success_2;
+		const page = TOPUP_SUCCESS_1 + response_mid + TOPUP_SUCCESS_2;
 
 		res.setHeader("Content-Type", "text/html");
 		res.status(200).end(page);
@@ -4301,7 +4291,7 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 
 app.all("/*", (req, res) => {
 
-	const doc = " Please visit <" + DOCUMENTATION_LINK + "> for documentation";
+	const doc = " Please visit <" + config.DOCUMENTATION_LINK + "> for documentation";
 
 	if (req.method === "POST")
 	{
@@ -4355,11 +4345,12 @@ if (! is_openbsd)
 
 function drop_worker_privileges()
 {
-	for (const k in password)
-	{
-		password[k] = null;
-		delete password[k];	// forget all passwords
-	}
+	//Since there was only one password (password.DB), it has been moved to config.DB_PASSWORD
+	//for (const k in password)
+	//{
+	//	password[k] = null;
+	//	delete password[k];	// forget all passwords
+	//}
 
 	if (is_openbsd)
 	{
@@ -4420,7 +4411,7 @@ if (cluster.isMaster)
 		cluster.fork();
 	}
 
-	if (LAUNCH_ADMIN_PANEL)
+	if (config.LAUNCH_ADMIN_PANEL)
 	{
 		cluster.on ("fork", (worker) => {
 			worker.on ("message", (endpoint) => {
@@ -4440,7 +4431,7 @@ if (cluster.isMaster)
 		cluster.fork();
 	});
 
-	if (LAUNCH_ADMIN_PANEL)
+	if (config.LAUNCH_ADMIN_PANEL)
 	{
 		const stats_app = express();
 
@@ -4461,9 +4452,10 @@ if (cluster.isMaster)
 }
 else
 {
-	https.createServer(https_options,app).listen(443,"0.0.0.0");
+	https.createServer(HTTPS_OPTIONS,app).listen(443,"0.0.0.0");
 
-	drop_worker_privileges();
+	if (!is_dev_env)
+	    drop_worker_privileges();
 
 	log("green","Worker started with pid " + process.pid);
 }

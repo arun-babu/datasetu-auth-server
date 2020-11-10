@@ -33,36 +33,32 @@ const Slimbot			= require('slimbot');
 const pgNativeClient		= require("pg-native");
 const pg			= new pgNativeClient();
 
-const telegram_apikey		= fs.readFileSync ("telegram.apikey","ascii").trim();
-const slimbot			= new Slimbot(telegram_apikey);
-
 const EUID			= process.geteuid();
 const is_openbsd		= os.type() === "OpenBSD";
 const pledge			= is_openbsd ? require("node-pledge")	: null;
 const unveil			= is_openbsd ? require("openbsd-unveil"): null;
 
-/* --- postgres --- */
+const is_dev_env		= process.env.NODE_ENV === "development";
+const config			= is_dev_env
+				    ? require("./config-dev")
+				    : require("./config-prod")
 
-const DB_SERVER	= "127.0.0.1";
-
-const password	= {
-	"DB"	: fs.readFileSync("passwords/bot.db.password","ascii").trim(),
-};
+const slimbot			= new Slimbot(config.TELEGRAM_APIKEY);
 
 // async postgres connection
 const pool = new Pool ({
-	host		: DB_SERVER,
+	host		: config.DB_SERVER,
 	port		: 5432,
 	user		: "bot",
 	database	: "postgres",
-	password	: password.DB,
+	password	: config.DB_PASSWORD,
 });
 
 pool.connect();
 
 // sync postgres connection
 pg.connectSync (
-	"postgresql://bot:"+ password.DB + "@" + DB_SERVER + ":5432/postgres",
+	"postgresql://bot:"+ config.DB_PASSWORD + "@" + config.DB_SERVER + ":5432/postgres",
 		(err) =>
 		{
 			if (err) {
