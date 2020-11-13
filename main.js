@@ -1632,8 +1632,8 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 		if (typeof r.environment === "string")
 			r.environments = [r.environment];
 
-		if (! r.environment)
-			r.environment = ["*"];
+		if (! r.environments)
+			r.environments = ["*"];
 
 		if (! (r.environments instanceof Array))
 		{
