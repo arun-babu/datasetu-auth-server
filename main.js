@@ -2009,6 +2009,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"methods"		: r.methods,
 				"apis"			: r.apis,
 				"scopes"		: r.scopes,
+				"environments"		: r.environments,
 				"body"			: r.body,
 				"manual-authorization"	: requires_manual_authorization,
 			});
@@ -2040,6 +2041,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 				"methods"		: r.methods,
 				"apis"			: r.apis,
 				"scopes"		: r.scopes,
+				"environments"		: r.environments,
 				"body"			: r.body,
 			});
 		}
