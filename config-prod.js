@@ -4,6 +4,7 @@ module.exports	=   Object.freeze ({
 
 	SERVER_NAME		: "auth.datasetu.org",
 	ALLOWED_SERVER_NAMES    : ["auth.datasetu.org"],
+
 	DROP_PRIVILEGES		: true,
 
 	DOCUMENTATION_LINK	: "https://datasetu.github.io/auth/",

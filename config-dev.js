@@ -2,6 +2,7 @@ module.exports	= Object.freeze ({
 
 	SERVER_NAME		: "auth.local",
 	ALLOWED_SERVER_NAMES    : ["localhost", "localhost:8443", "auth.local", "127.0.0.1", "127.0.0.1:8443"],
+
 	DROP_PRIVILEGES		: false,
 
 	DOCUMENTATION_LINK	: "https://datasetu.github.io/auth/",
