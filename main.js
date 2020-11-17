@@ -4375,6 +4375,9 @@ if (! is_openbsd)
 
 function drop_worker_privileges()
 {
+	if (! config.DROP_PRIVILEGES)
+		return;
+	
 	if (is_openbsd)
 	{
 		if (EUID === 0)
@@ -4478,9 +4481,9 @@ if (cluster.isMaster)
 else
 {
 	https.createServer(HTTPS_OPTIONS,app).listen(443,"0.0.0.0");
-
+	
 	drop_worker_privileges();
-
+	
 	log("green","Worker started with pid " + process.pid);
 }
 
