@@ -332,13 +332,27 @@ const evaluator	= aperture.createEvaluator	(apertureOpts);
 
 function new_token (issued_to)
 {
+	const random_hex	= crypto
+					.randomBytes(TOKEN_LEN)
+					.toString("hex");
+
+	// to make it compatible with URL encoding format
+	const issued_to_encoded	= issued_to.replace("@","~at~");
+
+	/* Token format = issued-by ~ issued-to ~ randomHex */
+
+	return config.SERVER_NAME + "~" + issued_to_encoded + "~" + random_hex;
+}
+
+function new_server_token (issued_to)
+{
 	const random_hex = crypto
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-	/* Token format = issued-by / issued-to / random-hex-string */
+	/* Server-token format = issued-to ~ randomHex */
 
-	return config.SERVER_NAME + "/" + issued_to + "/" + random_hex;
+	return issued_to + "~" + random_hex;
 }
 
 function is_valid_token (token, user = null)
@@ -346,14 +360,20 @@ function is_valid_token (token, user = null)
 	if (! is_string_safe(token))
 		return false;
 
-	const split = token.split("/");
+	const split = token.split("~");
 
-	if (split.length !== 3)
+	if (split.length !== 5)
 		return false;
 
+	// Token looks like: 'auth.datasetu.org~emailid~at~domain.com~randomHex'
+
 	const issued_by		= split[0];
-	const issued_to		= split[1];
-	const random_hex	= split[2];
+	const issued_to		= split[1] + "@" + split[3];
+	const at		= split[2];
+	const random_hex	= split[4];
+
+	if (at !== "at")
+		return false;
 
 	if (issued_by !== config.SERVER_NAME)
 		return false;
@@ -389,7 +409,9 @@ function is_valid_servertoken (server_token, hostname)
 	if (! is_string_safe(server_token))
 		return false;
 
-	const split = server_token.split("/");
+	// Server Token looks like : 'rs.com~randomHex'
+
+	const split = server_token.split("~");
 
 	if (split.length !== 2)
 		return false;
@@ -453,14 +475,14 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 			form		: {
 				chat_id		: results.rows[0].chat_id,
 
-				text		: '[ DataSetu Auth Server ] #' + index + '#'		+
-							token_hash  + '#\n\n"'				+
+				text		: "[ DataSetu Auth Server ] #" + index + "#"		+
+							token_hash  + "#\n\n'"				+
 								consumer_id				+
-							'"\n('						+
+							"'\n("						+
 								consumer_title				+
-							')'						+
-							'\n\n\tis requesting access to:\n\n"'		+
-								resource + '"',
+							")"						+
+							"\n\n\tis requesting access to:\n\n'"		+
+								resource + "'",
 
 				reply_markup	: JSON.stringify ({
 					inline_keyboard	: [[
@@ -935,7 +957,7 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	exceptions = exceptions + "-/.@:";
+	exceptions = exceptions + ":~-/";
 
 	for (const ch of str)
 	{
@@ -2145,17 +2167,12 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 	if (num_resource_servers > 1)
 	{
-		for (const key in resource_server_token)
+		for (const server in resource_server_token)
 		{
-			/* server-token format = issued-to / random-hex-string */
+			resource_server_token[server] = new_server_token(server);
 
-			resource_server_token[key] = key + "/" +
-							crypto
-							.randomBytes(TOKEN_LEN)
-							.toString("hex");
-
-			sha256_of_resource_server_token[key] = sha256 (
-				resource_server_token[key]
+			sha256_of_resource_server_token[server] = sha256 (
+				resource_server_token[server]
 			);
 		}
 	}
@@ -2285,8 +2302,10 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 		Object.freeze(consumer_request);
 	}
 
-	const split		= token.split("/");
-	const issued_to		= split[1];
+	// Token looks like: 'auth.datasetu.org~emailid~at~domain.com~randomHex'
+
+	const split		= token.split("~");
+	const issued_to		= split[1] + "@" + split[3];
 
 	const sha256_of_token	= sha256(token);
 
