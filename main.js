@@ -1352,7 +1352,7 @@ function dns_check (req, res, next)
 	if (cert_class > 1)
 		return next();
 
-	if (! cert.subject || ! is_string_safe(cert.subject.CN))
+	if (! cert.subject || ! is_string_safe(cert.subject.CN,"@"))
 		return ERROR (res, 400, "Invalid 'CN' in the certificate");
 
 	const	ip			= req.connection.remoteAddress;
