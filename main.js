@@ -594,6 +594,9 @@ function ERROR (res, http_status, error, exception = null)
 			response["//"] ="Unsafe characters (if any)"	+
 					" in 'invalid-input' field"	+
 					" have been replaced with '*'";
+
+			error["invalid-input"] = error["invalid-input"]
+							.replace(/^-a-zA-Z@:~-.\//g,"*");
 		}
 
 		response.error = error;
@@ -957,7 +960,7 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	exceptions = exceptions + ":~-/";
+	exceptions = exceptions + ":~-./";
 
 	for (const ch of str)
 	{
