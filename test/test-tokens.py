@@ -275,6 +275,8 @@ expect_failure(True)
 r = restricted_consumer.get_token(body)
 expect_failure(False)
 
+print(r)
+
 assert r['success']	is False
 assert r['status_code']	== 403
 
