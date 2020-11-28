@@ -587,16 +587,10 @@ function ERROR (res, http_status, error, exception = null)
 		{
 			response["//"] ="Unsafe characters (if any)"	+
 					" in 'invalid-input' field"	+
-					" have been replaced with '*'";
-
-			error["invalid-input"] = error["invalid-input"]
-							.replace(/^-a-zA-Z@:-.\//g,"*");
+					" have been replaced with '*'"	;
 		}
 
 		response.error = error;
-
-		if (process.env.SHOW_INTERNAL_ERRORS === "yes")
-			response["internal-error"] = exception;
 	}
 
 	res.status(http_status).end(JSON.stringify(response) + "\n");
