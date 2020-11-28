@@ -336,12 +336,9 @@ function new_token (issued_to)
 					.randomBytes(TOKEN_LEN)
 					.toString("hex");
 
-	// to make it compatible with URL encoding format
-	const issued_to_encoded	= issued_to.replace("@","~at~");
+	// Token format = issued-by/issued-to/random-hex
 
-	/* Token format = issued-by ~ issued-to ~ randomHex */
-
-	return config.SERVER_NAME + "~" + issued_to_encoded + "~" + random_hex;
+	return config.SERVER_NAME + "/" + issued_to + "~" + random_hex;
 }
 
 function new_server_token (issued_to)
@@ -350,7 +347,7 @@ function new_server_token (issued_to)
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-	/* Server-token format = issued-to / randomHex */
+	// Server-token format = issued-to/random-hex 
 
 	return issued_to + "/" + random_hex;
 }
