@@ -350,9 +350,9 @@ function new_server_token (issued_to)
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-	/* Server-token format = issued-to ~ randomHex */
+	/* Server-token format = issued-to / randomHex */
 
-	return issued_to + "~" + random_hex;
+	return issued_to + "/" + random_hex;
 }
 
 function is_valid_token (token, user = null)
@@ -360,20 +360,16 @@ function is_valid_token (token, user = null)
 	if (! is_string_safe(token))
 		return false;
 
-	const split = token.split("~");
+	const split = token.split("/");
 
-	if (split.length !== 5)
+	if (split.length !== 2)
 		return false;
 
-	// Token looks like: 'auth.datasetu.org~emailid~at~domain.com~randomHex'
+	// Token looks like: issued-by/issued-to/random-hex
 
 	const issued_by		= split[0];
-	const issued_to		= split[1] + "@" + split[3];
-	const at		= split[2];
-	const random_hex	= split[4];
-
-	if (at !== "at")
-		return false;
+	const issued_to		= split[1];
+	const random_hex	= split[2];
 
 	if (issued_by !== config.SERVER_NAME)
 		return false;
@@ -409,9 +405,9 @@ function is_valid_servertoken (server_token, hostname)
 	if (! is_string_safe(server_token))
 		return false;
 
-	// Server Token looks like : 'rs.com~randomHex'
+	// Server Token looks like : resource-server-domain/random-hex
 
-	const split = server_token.split("~");
+	const split = server_token.split("/");
 
 	if (split.length !== 2)
 		return false;
@@ -475,14 +471,14 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 			form		: {
 				chat_id		: results.rows[0].chat_id,
 
-				text		: "[ DataSetu Auth Server ] #" + index + "#"		+
-							token_hash  + "#\n\n'"				+
+				text		: '[ DataSetu Auth Server ] #' + index + '#'		+
+							token_hash  + '#\n\n"'				+
 								consumer_id				+
-							"'\n("						+
+							'"\n('						+
 								consumer_title				+
-							")"						+
-							"\n\n\tis requesting access to:\n\n'"		+
-								resource + "'",
+							')'						+
+							'\n\n\tis requesting access to:\n\n"'		+
+								resource + '"',
 
 				reply_markup	: JSON.stringify ({
 					inline_keyboard	: [[
@@ -596,7 +592,7 @@ function ERROR (res, http_status, error, exception = null)
 					" have been replaced with '*'";
 
 			error["invalid-input"] = error["invalid-input"]
-							.replace(/^-a-zA-Z@:~-.\//g,"*");
+							.replace(/^-a-zA-Z@:-.\//g,"*");
 		}
 
 		response.error = error;
@@ -960,7 +956,7 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	exceptions = exceptions + ":~-./";
+	exceptions = exceptions + "-/.@:";
 
 	for (const ch of str)
 	{
@@ -1355,7 +1351,7 @@ function dns_check (req, res, next)
 	if (cert_class > 1)
 		return next();
 
-	if (! cert.subject || ! is_string_safe(cert.subject.CN,"@/"))
+	if (! cert.subject || ! is_string_safe(cert.subject.CN))
 		return ERROR (res, 400, "Invalid 'CN' in the certificate");
 
 	const	ip			= req.connection.remoteAddress;
@@ -1642,7 +1638,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 		// allow some chars but not ".."
 
-		if (! is_string_safe(resource, "/*_") || resource.indexOf("..") >= 0)
+		if (! is_string_safe(resource, "*_") || resource.indexOf("..") >= 0)
 		{
 			const error_response = {
 				"message"	: "'id' contains unsafe characters",
@@ -2170,12 +2166,14 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 	if (num_resource_servers > 1)
 	{
-		for (const server in resource_server_token)
+		for (const key in resource_server_token)
 		{
-			resource_server_token[server] = new_server_token(server);
+			// key is the resource server's domain name
 
-			sha256_of_resource_server_token[server] = sha256 (
-				resource_server_token[server]
+			resource_server_token[key] = new_server_token(key);
+ 
+			sha256_of_resource_server_token[key] = sha256 (
+				resource_server_token[key]
 			);
 		}
 	}
@@ -2245,7 +2243,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			const provider_id_hash	= email_domain + "/" + sha1_of_email;
 
 			const telegram_id = manual_authorization_array[i]["manual-authorization"]
-							.split("telegram:")[1];
+						.split("telegram:")[1];
 
 			send_telegram_to_provider (
 				consumer_id,
@@ -2305,10 +2303,10 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 		Object.freeze(consumer_request);
 	}
 
-	// Token looks like: 'auth.datasetu.org~emailid~at~domain.com~randomHex'
+	// Token looks like: issued-by/issued-to/random-hex
 
-	const split		= token.split("~");
-	const issued_to		= split[1] + "@" + split[3];
+	const split		= token.split("/");
+	const issued_to		= split[1];
 
 	const sha256_of_token	= sha256(token);
 
