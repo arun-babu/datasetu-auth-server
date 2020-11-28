@@ -359,7 +359,7 @@ function is_valid_token (token, user = null)
 
 	const split = token.split("/");
 
-	if (split.length !== 2)
+	if (split.length !== 3)
 		return false;
 
 	// Token looks like: issued-by/issued-to/random-hex
