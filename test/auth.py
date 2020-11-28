@@ -77,7 +77,7 @@ class Auth():
 				"WARNING: auth did not send 'application/json' : " + url  + "\n"
 			)
 
-                        sys.stderr(response);
+                        print("Response",response);
 
 			return {"success":ret, "response":None}
 		#
