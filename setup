@@ -114,6 +114,8 @@ then
 		sleep 1
 	done
 
+	export SHOW_INTERNAL_ERRORS = "yes"
+
 	./run.tmux
 	./run.crl.tmux
 else

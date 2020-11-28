@@ -595,7 +595,7 @@ function ERROR (res, http_status, error, exception = null)
 
 		response.error = error;
 
-		if (config.SHOW_INTERNAL_ERRORS)
+		if (process.env.SHOW_INTERNAL_ERRORS === "yes")
 			response["internal-error"] = exception;
 	}
 
