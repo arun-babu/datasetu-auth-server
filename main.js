@@ -1352,7 +1352,7 @@ function dns_check (req, res, next)
 	if (cert_class > 1)
 		return next();
 
-	if (! cert.subject || ! is_string_safe(cert.subject.CN,"@"))
+	if (! cert.subject || ! is_string_safe(cert.subject.CN,"@/"))
 		return ERROR (res, 400, "Invalid 'CN' in the certificate");
 
 	const	ip			= req.connection.remoteAddress;
@@ -1639,7 +1639,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 		// allow some chars but not ".."
 
-		if (! is_string_safe(resource, "*_") || resource.indexOf("..") >= 0)
+		if (! is_string_safe(resource, "/*_") || resource.indexOf("..") >= 0)
 		{
 			const error_response = {
 				"message"	: "'id' contains unsafe characters",
