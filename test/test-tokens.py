@@ -66,8 +66,6 @@ if type(token) == TUPLE:
 
 s = token.split("/")
 
-print "Got token",token
-
 assert len(s)	== 3
 assert s[0]	== 'auth.datasetu.org'
 
