@@ -8,14 +8,14 @@ start_time=$(date +%s)
 
 for f in `ls test*.py`
 do
-	echo "-----> $f" | tee -a /tmp/report
+	echo -n "-----> $f ... " | tee -a /tmp/report
 	output=`python3 $f`
 
 	if [ $? = 0 ]
 	then
-		echo | tee -a /tmp/report
-		echo Test [$f] passed | tee -a /tmp/report
+		echo passed | tee -a /tmp/report
 	else
+		echo failed | tee -a /tmp/report
 		error_code=1	
 	fi
 
