@@ -1,5 +1,3 @@
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-
 import os
 
 from init import consumer
@@ -26,7 +24,7 @@ provider.set_policy(policy)
 
 assert policy in provider.get_policy()['response']['policy']
 
-new_policy  = "*@rbccps.org can access resource-yyz-abc for 1 hour"
+new_policy = "*@rbccps.org can access resource-yyz-abc for 1 hour"
 assert provider.append_policy(new_policy)['success'] is True
 
 x = provider.get_policy()['response']['policy']
@@ -35,8 +33,8 @@ assert policy in x
 
 r = provider.audit_tokens(5)
 assert r['success'] is True
-audit_report        = r['response']
-as_provider         = audit_report["as-provider"]
+audit_report	= r['response']
+as_provider	= audit_report["as-provider"]
 
 
 num_tokens_before = len(as_provider)
@@ -55,8 +53,8 @@ body = [
 r = consumer.get_token(body)
 access_token = r['response']
 
-assert r['success']     is True
-assert None             != access_token
+assert r['success']	is True
+assert None		!= access_token
 assert 60*60*2		== access_token['expires-in']
 
 token = access_token['token'],
@@ -84,21 +82,21 @@ assert resource_server.introspect_token (token,server_token)['success'] is True
 
 # introspect with request
 request = [
-            {
-		"id"	: "rbccps.org/9cf2c2382cf661fc20a4776345a3be7a143a109c/" + RS + "/resource-xyz-yzz",
+	{
+		"id"		: "rbccps.org/9cf2c2382cf661fc20a4776345a3be7a143a109c/" + RS + "/resource-xyz-yzz",
 		"apis"		: ["/latest"],
 		"methods"	: ["GET"],
 		"body"		: {"key":"some-key"}
-	    }
+	}
 ]
 
 bad_request = [
-            {
-		"id"	: "rbccps.org/9cf2c2382cf661fc20a4776345a3be7a143a109c/" + RS + "/resource-xyz-yzz",
+	{
+		"id"		: "rbccps.org/9cf2c2382cf661fc20a4776345a3be7a143a109c/" + RS + "/resource-xyz-yzz",
 		"apis"		: ["/latest-now"],
 		"methods"	: ["POST"],
 		"body"		: {"key":"some-key"}
-	    }
+	}
 ]
 
 assert resource_server.introspect_token (token,server_token,request)['success']			is True
@@ -158,8 +156,8 @@ assert found['revoked'] is True
 r = provider.get_token(body)
 access_token = r['response']
 
-assert r['success']     is True
-assert None             != access_token
+assert r['success']	is True
+assert None		!= access_token
 assert 60*60*2		== access_token['expires-in']
 
 token = access_token['token']
@@ -173,38 +171,38 @@ assert len(s)	== 3
 assert s[0]	== 'auth.datasetu.org'
 
 r = provider.audit_tokens(100)
-assert r["success"] is True
-audit_report        = r['response']
-as_provider         = audit_report["as-provider"]
-num_tokens          = len(as_provider)
-assert num_tokens   >= 1
+assert r["success"] 	is True
+audit_report		= r['response']
+as_provider		= audit_report["as-provider"]
+num_tokens		= len(as_provider)
+assert num_tokens	>= 1
 
 for a in as_provider:
-        if a["revoked"] is False and a['expired'] is False:
-                cert_serial         = a["certificate-serial-number"]
-                cert_fingerprint    = a["certificate-fingerprint"]
-                break
+	if a["revoked"] is False and a['expired'] is False:
+		cert_serial		= a["certificate-serial-number"]
+		cert_fingerprint	= a["certificate-fingerprint"]
+		break
 
 r = provider.revoke_all(cert_serial, cert_fingerprint)
 assert r["success"] is True
 assert r["response"]["num-tokens-revoked"] >= 1
 
 r = provider.audit_tokens(100)
-assert r["success"] is True
-audit_report        = r['response']
-as_provider         = audit_report["as-provider"]
+assert r["success"]	is True
+audit_report		= r['response']
+as_provider		= audit_report["as-provider"]
 
 for a in as_provider:
 	if a['certificate-serial-number'] == cert_serial and a['certificate-fingerprint'] == cert_fingerprint:
-                if a['expired'] is False:
-                        assert a['revoked'] is True
+		if a['expired'] is False:
+			assert a['revoked'] is True
 
 # test revoke API
 r = provider.get_token(body)
 access_token = r['response']
 
-assert r['success']     is True
-assert None             != access_token
+assert r['success']	is True
+assert None		!= access_token
 assert 60*60*2		== access_token['expires-in']
 
 token = access_token['token']
@@ -219,13 +217,13 @@ assert s[0]	== 'auth.datasetu.org'
 
 r = provider.audit_tokens(5)
 assert r["success"] is True
-audit_report        = r['response']
-as_consumer         = audit_report["as-consumer"]
-num_revoked_before  = 0
+audit_report		= r['response']
+as_consumer		= audit_report["as-consumer"]
+num_revoked_before	= 0
 
 for a in as_consumer:
-        if a['revoked'] is True:
-                num_revoked_before = num_revoked_before + 1
+	if a['revoked'] is True:
+		num_revoked_before = num_revoked_before + 1
 
 r = provider.revoke_tokens(token)
 assert r["success"] is True
@@ -233,17 +231,17 @@ assert r["response"]["num-tokens-revoked"] >= 1
 
 r = provider.audit_tokens(5)
 assert r["success"] is True
-audit_report        = r['response']
-as_consumer         = audit_report["as-consumer"]
-num_revoked_after   = 0
+audit_report		= r['response']
+as_consumer		= audit_report["as-consumer"]
+num_revoked_after	= 0
 
 for a in as_consumer:
-        if a['revoked'] is True:
-                num_revoked_after = num_revoked_after + 1
+	if a['revoked'] is True:
+		num_revoked_after = num_revoked_after + 1
 
 assert num_revoked_before < num_revoked_after
 
-new_policy  = "*@iisc.ac.in can access * for 1 month"
+new_policy = "*@iisc.ac.in can access * for 1 month"
 assert provider.set_policy(new_policy)['success'] is True
 
 body = [
@@ -258,8 +256,8 @@ body = [
 r = restricted_consumer.get_token(body)
 access_token = r['response']
 
-assert r['success']     		is True
-assert None  		           	!= access_token
+assert r['success']			is True
+assert None				!= access_token
 assert r['response']['expires-in']	== 60*60*24*30*1
 
 body = [
@@ -275,14 +273,12 @@ expect_failure(True)
 r = restricted_consumer.get_token(body)
 expect_failure(False)
 
-print(r.text)
-
 assert r['success']	is False
 assert r['status_code']	== 403
 
 # new api tests
 
-new_policy  = "*@iisc.ac.in can access * for 5 months"
+new_policy = "*@iisc.ac.in can access * for 5 months"
 assert provider.set_policy(new_policy)['success'] is True
 
 body = [
@@ -381,7 +377,7 @@ found = None
 
 for a in as_provider:
 	if a['token-hash'] == token_hash:
-                token_hash_found = True
+		token_hash_found = True
 		found = a
 		break
 
@@ -389,7 +385,7 @@ assert token_hash_found	is True
 assert found['revoked'] is False
 
 for r in found['request']:
-        assert r['id'].startswith('iisc.ac.in') is True
+	assert r['id'].startswith('iisc.ac.in') is True
 
 # same test with rbccps.org provider
 r = provider.audit_tokens(5)
@@ -408,4 +404,4 @@ assert token_hash_found	is True
 assert found['revoked'] is False
 
 for r in found['request']:
-        assert r['id'].startswith('rbccps.org') is True
+	assert r['id'].startswith('rbccps.org') is True

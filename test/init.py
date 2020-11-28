@@ -1,10 +1,8 @@
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-
 import os
 from auth import Auth
 
-auth_server = "auth.datasetu.org"
-home        = os.path.expanduser("~") + "/"
+auth_server	= "auth.datasetu.org"
+home		= os.path.expanduser("~") + "/"
 
 consumer		= Auth(home + "consumer.pem",	 home + "consumer.key.pem",	auth_server)
 provider		= Auth(home + "provider.pem",	 home + "provider.key.pem",	auth_server)
@@ -17,11 +15,11 @@ fake_resource_server	= Auth(home + "f-server.pem",	 home + "f-server.key.pem",	a
 
 if "AUTH_SERVER" in os.environ and os.environ["AUTH_SERVER"] == "localhost":
 #
-    import urllib3
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+	import urllib3
+	urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 #
 
-resource_server		= Auth(home + "r-server.pem", home + "r-server.key.pem", auth_server)
+resource_server = Auth(home + "r-server.pem", home + "r-server.key.pem", auth_server)
 
 def expect_failure(b):
 	if b:

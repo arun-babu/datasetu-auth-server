@@ -1,5 +1,3 @@
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-
 from init import consumer
 from init import provider
 from init import delegate

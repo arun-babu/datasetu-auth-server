@@ -1,5 +1,3 @@
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-
 import os
 import sys
 import json
@@ -29,33 +27,33 @@ class Auth():
 			api_type = "/marketplace"
 			api = "/".join(api.split("/")[1:])
 
-                if api.endswith("topup-success"):
-		        url = self.url + api_type + "/" + api
-                        response = requests.get (
-                                url	= url,
-                                verify	= self.ssl_verify,
-                                cert	= self.credentials,
-                                params	= body
-                                )
-                else:
-                        body = json.dumps(body)
-                        url = self.url + api_type + "/v1/" + api
-                        response = requests.post (
-                                url         = url,
-                                verify      = self.ssl_verify,
-                                cert        = self.credentials,
-                                data        = body,
-                                headers     = {"content-type":"application/json"}
-                        )
+		if api.endswith("topup-success"):
+			url = self.url + api_type + "/" + api
+			response = requests.get (
+				url	= url,
+				verify	= self.ssl_verify,
+				cert	= self.credentials,
+				params	= body
+			)
+		else:
+			body = json.dumps(body)
+			url = self.url + api_type + "/v1/" + api
+			response = requests.post (
+				url	= url,
+				verify	= self.ssl_verify,
+				cert	= self.credentials,
+				data	= body,
+				headers	= {"content-type":"application/json"}
+			)
 
 		if response.status_code != 200:
 		#
 			if "EXPECT_FAILURE" not in os.environ:
 			#
 				sys.stderr.write (
-					"WARNING: auth API failure  | "	+
+					"WARNING: auth API failure | "	+
 					url			+ " | "	+
-					response.reason 	+ " | "	+
+					response.reason		+ " | "	+
 					response.text
 				)
 			#
@@ -74,10 +72,8 @@ class Auth():
 		else:
 		#
 			sys.stderr.write (
-				"WARNING: auth did not send 'application/json' : " + url  + "\n"
+				"WARNING: auth did not send 'application/json' : " + url + "\n"
 			)
-
-                        print("Response",response.text);
 
 			return {"success":ret, "response":None}
 		#
@@ -182,16 +178,16 @@ class Auth():
 			body['serial']		= serial
 			body['fingerprint']	= fingerprint
 
-	        callback_params = topup_function(body, self.credentials)
-                # call topup-success API to confirm the topup
+		callback_params = topup_function(body, self.credentials)
+		# call topup-success API to confirm the topup
 
-                return self.call("marketplace/topup-success", callback_params)
+		return self.call("marketplace/topup-success", callback_params)
 	#
 
-        def confirm_payment(self, token):
-        #
-                body = {'token': token}
+	def confirm_payment(self, token):
+	#
+		body = {'token': token}
 
-                return self.call("marketplace/confirm-payment", body)
-        #
+		return self.call("marketplace/confirm-payment", body)
+	#
 #}
