@@ -592,7 +592,8 @@ function ERROR (res, http_status, error, exception = null)
 							.replace(/^-a-zA-Z@:-.\//g,"*");
 		}
 
-		response.error = error;
+		response.error		= error;
+		response.exception	= exception; // for testing
 	}
 
 	res.status(http_status).end(JSON.stringify(response) + "\n");
@@ -2982,7 +2983,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 	(error, results) =>
 	{
 		if (error)
-			return ERROR (res,500,"Internal error!",error);
+			return ERROR (res, 500, "Internal error!", error);
 
 		let query;
 		let params;
