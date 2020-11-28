@@ -47,7 +47,11 @@ const compression		= require("compression");
 const http_request		= require("request");
 
 const is_dev_env		= process.env.NODE_ENV === "development";
-const config			= require (is_dev_env ? "./config-dev" : "./config-prod");
+const config			= require (
+					is_dev_env ?
+						"./config-dev" :
+						"./config-prod"
+				);
 
 const pgNativeClient		= require("pg-native");
 const pg			= new pgNativeClient();
@@ -73,10 +77,10 @@ const CA_CERT_PATH		= "ca.datasetu.org.crt";
 
 const TRUSTED_CAs		= Object.freeze ([
 
-					fs.readFileSync(CA_CERT_PATH),
-					fs.readFileSync(SYSTEM_TRUSTED_CERTS),
-					fs.readFileSync("CCAIndia2015.cer"),
-					fs.readFileSync("CCAIndia2014.cer")
+		fs.readFileSync(CA_CERT_PATH),
+		fs.readFileSync(SYSTEM_TRUSTED_CERTS),
+		fs.readFileSync("CCAIndia2015.cer"),
+		fs.readFileSync("CCAIndia2014.cer")
 ]);
 
 const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
@@ -120,11 +124,11 @@ const MIN_CERT_CLASS_REQUIRED	= Object.freeze ({
 });
 
 const HTTPS_OPTIONS = Object.freeze ({
-		key			: fs.readFileSync("https-key.pem"),
-		cert			: fs.readFileSync("https-certificate.pem"),
-		ca			: TRUSTED_CAs,
-		requestCert		: true,
-		rejectUnauthorized	: true
+	key			: fs.readFileSync("https-key.pem"),
+	cert			: fs.readFileSync("https-certificate.pem"),
+	ca			: TRUSTED_CAs,
+	requestCert		: true,
+	rejectUnauthorized	: true
 });
 
 const STATIC_PAGES = Object.freeze ({
@@ -173,31 +177,31 @@ const TOPUP_SUCCESS_2	= STATIC_PAGES["topup-success-2.html"];
 const TOPUP_FAILURE_1	= STATIC_PAGES["topup-failure-1.html"];
 const TOPUP_FAILURE_2	= STATIC_PAGES["topup-failure-2.html"];
 
-const TELEGRAM_URL	= config.TELEGRAM			+
-				"/bot"				+
-					config.TELEGRAM_APIKEY	+
-				"/sendMessage?chat_id="		+
-					config.TELEGRAM_CHAT_ID	+
+const TELEGRAM_URL	= config.TELEGRAM				+
+				"/bot"					+
+					config.TELEGRAM_APIKEY		+
+				"/sendMessage?chat_id="			+
+					config.TELEGRAM_CHAT_ID		+
 				"&text=";
 
-const SYNC_CONN_STR	= "postgresql://"			+
-					config.DB_USER		+
-				":"				+
-					config.DB_PASSWORD	+
-				"@"				+
-					config.DB_SERVER	+
+const SYNC_CONN_STR	= "postgresql://"				+
+					config.DB_USER			+
+				":"					+
+					config.DB_PASSWORD		+
+				"@"					+
+					config.DB_SERVER		+
 				":5432/postgres";
 
-const RZPAY_URL		= "https://"				+
-					config.RZPAY_KEY_ID	+
-				":"				+
-					config.RZPAY_KEY_SECRET	+
+const RZPAY_URL		= "https://"					+
+					config.RZPAY_KEY_ID		+
+				":"					+
+					config.RZPAY_KEY_SECRET		+
 				"@api.razorpay.com/v1/invoices/";
 
 
 process.env.TZ		= "Asia/Kolkata";
 
-/* --- dns --- */
+/* --- DNS --- */
 
 dns.setServers ([
 	"1.1.1.1",
@@ -325,6 +329,18 @@ const evaluator	= aperture.createEvaluator	(apertureOpts);
 
 
 /* --- functions --- */
+
+function new_token (issued_to)
+{
+	const random_hex = crypto
+				.randomBytes(TOKEN_LEN)
+				.toString("hex");
+
+	/* Token format = issued-by / issued-to / random-hex-string */
+
+	return config.SERVER_NAME + "/" + issued_to + "/" + random_hex;
+}
+
 function is_valid_token (token, user = null)
 {
 	if (! is_string_safe(token))
@@ -423,7 +439,10 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 		if (results.rows.length === 0)
 			return send_telegram ("No chat id for : " + telegram_id + " : provider " + provider_id);
 
-		const url		= config.TELEGRAM + "/bot" + config.TELEGRAM_APIKEY + "/sendMessage";
+		const url		= config.TELEGRAM		+
+						"/bot"			+
+					config.TELEGRAM_APIKEY		+
+						"/sendMessage";
 
 		const split		= request.id.split("/");
 		const resource		= split.slice(2).join("/");
@@ -463,7 +482,7 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 			if (error_1)
 			{
 				log ("yellow",
-					"Telegram failed ! response = " +
+					"Telegram failed ! response = "	+
 						String(response)	+
 					" body = "			+
 						String(body)
@@ -475,15 +494,12 @@ function send_telegram_to_provider (consumer_id, consumer_title, provider_id, te
 
 function send_telegram (message)
 {
-	http_request ( TELEGRAM_URL + "[ AUTH ] : " + message, (error, response, body) =>
+	http_request (TELEGRAM_URL + "[ AUTH ] : " + message, (error, response) =>
 	{
 		if (error)
 		{
 			log ("yellow",
-				"Telegram failed ! response = " +
-					String(response)	+
-				" body = "			+
-					String(body)
+				"Telegram failed ! response = " + response
 			);
 		}
 	});
@@ -553,9 +569,9 @@ function ERROR (res, http_status, error, exception = null)
 
 		if (error["invalid-input"])
 		{
-			response["//"] ="Unsafe characters (if any) in"		+
-					" 'invalid-input' field have been"	+
-					" replaced with '*'";
+			response["//"] ="Unsafe characters (if any)"	+
+					" in 'invalid-input' field"	+
+					" have been replaced with '*'";
 		}
 
 		response.error = error;
@@ -688,7 +704,7 @@ function is_certificate_ok (req, cert, validate_email)
 	if (validate_email)
 	{
 		if (! is_valid_email(cert.subject.emailAddress))
-			return "Invalid 'emailAddress' field in the certificate";
+			return "Invalid 'emailAddress' field in certificate";
 
 		if (! cert.issuer || ! cert.issuer.emailAddress)
 			return "Certificate issuer has no 'emailAddress' field";
@@ -778,8 +794,8 @@ function is_secure (req, res, cert, validate_email = true)
 
 		if (! whitelisted)
 		{
-			return "Invalid 'origin' header; this website is not"	+
-				" whitelisted to call this API";
+			return "Invalid 'origin' header; this website is" +
+				" not whitelisted to call this API";
 		}
 
 		res.header("Access-Control-Allow-Origin", req.headers.origin);
@@ -953,7 +969,10 @@ function is_datasetu_certificate(cert)
 
 	// certificate issuer should be DataSetu CA or a DataSetu sub-CA
 
-	return (email ==="ca@datasetu.org" || email.startsWith("datasetu.sub.ca@"));
+	return (
+		email === "ca@datasetu.org"		||
+		email.startsWith("datasetu.sub.ca@")
+	);
 }
 
 function body_to_json (body)
@@ -1027,8 +1046,7 @@ function basic_security_check (req, res, next)
 	{
 		return ERROR (
 			res, 404,
-				"No such page/API. Please visit : "	+
-				config.DOCUMENTATION_LINK + " for documentation."
+				"No such page/API." + config.DOCUMENTATION_MSG
 		);
 	}
 
@@ -1045,7 +1063,9 @@ function basic_security_check (req, res, next)
 	cert.serialNumber	= cert.serialNumber.toLowerCase();
 	cert.fingerprint	= cert.fingerprint.toLowerCase();
 
-	if ((res.locals.is_datasetu_certificate = is_datasetu_certificate(cert)))
+	res.locals.is_datasetu_certificate = is_datasetu_certificate(cert);
+
+	if (res.locals.is_datasetu_certificate)
 	{
 		// id-qt-unotice is in the format "key1:value1;key2:value2;..."
 
@@ -1135,7 +1155,7 @@ function basic_security_check (req, res, next)
 		if (error !== "OK")
 			return ERROR (res, 403, error);
 
-		pool.query("SELECT crl FROM crl LIMIT 1", [], (error, results) =>
+		pool.query("SELECT crl FROM crl LIMIT 1", [], (error,results) =>
 		{
 			if (error || results.rows.length === 0)
 			{
@@ -1270,7 +1290,7 @@ function basic_security_check (req, res, next)
 
 			except in case of "/certificate-info"
 
-			if user is trying to call a class-1 API,
+			if the user is trying to call a class-1 API,
 			then downgrade his certificate class
 		*/
 
@@ -1305,7 +1325,7 @@ function dns_check (req, res, next)
 	const cert		= res.locals.cert;
 	const cert_class	= res.locals.cert_class;
 
-	// No dns check required if certificate is class-2 or above
+	// No DNS check required if certificate is class-2 or above
 
 	if (cert_class > 1)
 		return next();
@@ -1317,10 +1337,10 @@ function dns_check (req, res, next)
 	let	ip_matched		= false;
 	const	hostname_in_certificate	= cert.subject.CN.toLowerCase();
 
-	dns.lookup (hostname_in_certificate, {all:true}, (error, ip_addresses) =>
+	dns.lookup (hostname_in_certificate, {all:true}, (error,ip_addresses) =>
 	{
 		/*
-			No dns checks for "example.com"
+			No DNS checks for "example.com"
 			this for developer's testing purposes.
 		*/
 
@@ -1358,7 +1378,7 @@ function dns_check (req, res, next)
 			);
 		}
 
-		return next();  // dns check passed
+		return next();  // DNS check passed
 	});
 }
 
@@ -2054,13 +2074,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 	if (num_rules_passed < 1 || num_rules_passed < request_array.length)
 		return ERROR (res, 403, "Unauthorized!");
 
-	const random_hex = crypto
-				.randomBytes(TOKEN_LEN)
-				.toString("hex");
-
-	/* Token format = issued-by / issued-to / random-hex-string */
-
-	const token	= config.SERVER_NAME + "/" + consumer_id + "/" + random_hex;
+	const token	= new_token(consumer_id);
 
 	const response	= {
 
@@ -2211,7 +2225,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			const provider_id_hash	= email_domain + "/" + sha1_of_email;
 
 			const telegram_id = manual_authorization_array[i]["manual-authorization"]
-						.split("telegram:")[1];
+							.split("telegram:")[1];
 
 			send_telegram_to_provider (
 				consumer_id,
@@ -2863,13 +2877,13 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 		}
 		else
 		{
-			query	= "INSERT INTO policy VALUES("	+
-					"$1::text,"		+
-					"$2::text,"		+
-					"$3::jsonb,"		+
-					"NULL,"			+
-					"NOW(),"		+
-					"$4::text"		+
+			query	= "INSERT INTO policy VALUES("		+
+					"$1::text,"			+
+					"$2::text,"			+
+					"$3::jsonb,"			+
+					"NULL,"				+
+					"NOW(),"			+
+					"$4::text"			+
 			")";
 
 			params	= [
@@ -3009,13 +3023,13 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 						.from(policy)
 						.toString("base64");
 
-			query	= "INSERT INTO policy VALUES("	+
-					"$1::text,"		+
-					"$2::text,"		+
-					"$3::jsonb,"		+
-					"NULL,"			+
-					"NOW(),"		+
-					"$4::text"		+
+			query	= "INSERT INTO policy VALUES("		+
+					"$1::text,"			+
+					"$2::text,"			+
+					"$3::jsonb,"			+
+					"NULL,"				+
+					"NOW(),"			+
+					"$4::text"			+
 			")";
 
 			params	= [
@@ -3053,9 +3067,10 @@ app.post("/auth/v[1-2]/acl", (req, res) => {
 
 	pool.query (
 
-		"SELECT policy, previous_policy, last_updated, api_called_from"	+
-		" FROM policy"							+
-		" WHERE id = $1::text "						+
+		"SELECT policy, previous_policy,"		+
+		" last_updated, api_called_from"		+
+		" FROM policy"					+
+		" WHERE id = $1::text"				+
 		" LIMIT 1",
 		[
 			provider_id_hash			// 1
@@ -3139,7 +3154,9 @@ app.post("/auth/v[1-2]/acl/revert", (req, res) => {
 		}
 		catch (x)
 		{
-			const err = typeof x === "object" ? x.message : String(x);
+			const err = typeof x === "object" ?
+							x.message :
+							String(x);
 
 			return ERROR (
 				res, 400,
@@ -3777,8 +3794,8 @@ app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
 		{
 			if (insert_error || insert_results.rowCount === 0)
 			{
-				return ERROR (
-					res, 500, "Internal error!", insert_error
+				return ERROR (res, 500,
+					"Internal error!", insert_error
 				);
 			}
 
@@ -4321,11 +4338,13 @@ app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
 
 app.all("/*", (req, res) => {
 
-	const doc = " Please visit <" + config.DOCUMENTATION_LINK + "> for documentation";
-
 	if (req.method === "POST")
 	{
-		return ERROR (res, 404, "No such API." + doc );
+		return ERROR (
+			res, 404,
+				"No such page/API." +
+					config.DOCUMENTATION_MSG
+		);
 	}
 	else if (req.method === "GET")
 	{
@@ -4333,15 +4352,31 @@ app.all("/*", (req, res) => {
 		{
 			const path = req.url.split("?")[0];
 
-			if (MIN_CERT_CLASS_REQUIRED[path])
-				return ERROR (res, 405, "Method must be POST." + doc);
+			if (MIN_CERT_CLASS_REQUIRED[path]) // is a valid API
+			{
+				return ERROR (
+					res, 405,
+						"Method must be POST." +
+							config.DOCUMENTATION_MSG
+				);
+			}
 			else
-				return ERROR (res, 404, "Page not found." + doc);
+			{
+				return ERROR (
+					res, 404,
+						"Page not found." +
+							config.DOCUMENTATION_MSG
+				);
+			}
 		}
 	}
 	else
 	{
-		return ERROR (res, 405, "Method must be POST." + doc);
+		return ERROR (
+			res, 405,
+				"Method must be POST." +
+					config.DOCUMENTATION_MSG
+		);
 	}
 });
 

@@ -5,7 +5,7 @@ module.exports	= Object.freeze ({
 
 	DROP_PRIVILEGES		: false,
 
-	DOCUMENTATION_LINK	: "https://datasetu.github.io/auth/",
+	DOCUMENTATION_MSG	: "Please visit <https://datasetu.github.io/auth/> for documentation",
 
 	WHITELISTED_DOMAINS	: ["datasetu.github.io"],
 	WHITELISTED_ENDSWITH    : [".datasetu.org"],
