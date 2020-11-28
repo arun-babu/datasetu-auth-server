@@ -66,6 +66,8 @@ if type(token) == TUPLE:
 
 s = token.split("/")
 
+print "Got token",token
+
 assert len(s)	== 3
 assert s[0]	== 'auth.datasetu.org'
 
@@ -73,6 +75,11 @@ server_token = access_token['server-token'][RS]
 if type(server_token) == TUPLE:
 	server_token = server_token[0]
 
+s = server_token.split("/")
+
+assert len(s)	== 2
+assert s[0]	== RS
+ 
 assert resource_server.introspect_token (token,server_token)['success'] is True
 # introspect once more
 assert resource_server.introspect_token (token,server_token)['success'] is True
