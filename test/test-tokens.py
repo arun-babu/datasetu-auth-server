@@ -328,7 +328,7 @@ assert r["success"] is True
 audit_report = r['response']
 as_provider = audit_report["as-provider"]
 
-token_hash = hashlib.sha256(access_token['token']).hexdigest()
+token_hash = hashlib.sha256(access_token['token'].encode('utf-8')).hexdigest()
 
 token_hash_found = False
 found = None
