@@ -4,6 +4,7 @@ module.exports	= Object.freeze ({
 	ALLOWED_SERVER_NAMES    : ["localhost", "localhost:8443", "auth.local", "127.0.0.1", "127.0.0.1:8443"],
 
 	DROP_PRIVILEGES		: false,
+	SHOW_INTERNAL_ERRORS	: true,
 
 	DOCUMENTATION_MSG	: "Please visit <https://datasetu.github.io/auth/> for documentation",
 

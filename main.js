@@ -47,6 +47,7 @@ const compression		= require("compression");
 const http_request		= require("request");
 
 const is_dev_env		= process.env.NODE_ENV === "development";
+
 const config			= require (
 					is_dev_env ?
 						"./config-dev" :
@@ -592,8 +593,10 @@ function ERROR (res, http_status, error, exception = null)
 							.replace(/^-a-zA-Z@:-.\//g,"*");
 		}
 
-		response.error		= error;
-		response.exception	= exception; // for testing
+		response.error = error;
+
+		if (config.SHOW_INTERNAL_ERRORS)
+			response.internal_error = exception;
 	}
 
 	res.status(http_status).end(JSON.stringify(response) + "\n");

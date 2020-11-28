@@ -6,6 +6,7 @@ module.exports	=   Object.freeze ({
 	ALLOWED_SERVER_NAMES    : ["auth.datasetu.org"],
 
 	DROP_PRIVILEGES		: true,
+	SHOW_INTERNAL_ERRORS	: true,
 
 	DOCUMENTATION_MSG	: "Please visit <https://datasetu.github.io/auth/> for documentation",
 
