@@ -596,7 +596,7 @@ function ERROR (res, http_status, error, exception = null)
 		response.error = error;
 
 		if (config.SHOW_INTERNAL_ERRORS)
-			response.internal_error = exception;
+			response["internal-error"] = exception;
 	}
 
 	res.status(http_status).end(JSON.stringify(response) + "\n");
