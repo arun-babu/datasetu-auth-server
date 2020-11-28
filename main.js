@@ -338,7 +338,7 @@ function new_token (issued_to)
 
 	// Token format = issued-by/issued-to/random-hex
 
-	return config.SERVER_NAME + "/" + issued_to + "~" + random_hex;
+	return config.SERVER_NAME + "/" + issued_to + "/" + random_hex;
 }
 
 function new_server_token (issued_to)
