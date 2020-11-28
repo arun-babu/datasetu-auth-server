@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import requests
-from topup_sql import topup_function
+#from topup_sql import topup_function
 
 class Auth():
 #{
