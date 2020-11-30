@@ -7,7 +7,7 @@ tasks:
 - build: |
     doas sh ftp-script.sh
 - test: |
-    doas pkg_add py-requests py-cryptography py-psycopg2
+    doas pkg_add py3-requests py3-psycopg2 py3-cryptography
     cd /home/datasetu-auth-server/test
     doas chmod 775 .
     doas chmod 775 ../passwords/auth.db.password

@@ -19,7 +19,7 @@ fi
 useradd -s /sbin/nologin -d /nonexistent _aaa
 useradd -s /sbin/nologin -d /nonexistent _bot
 
-pkg_add postgresql-server postgresql-client node py3-requests py3-psycopg2 py3-cryptography
+pkg_add postgresql-server postgresql-client node
 rcctl enable postgresql
 
 rm -rf passwords

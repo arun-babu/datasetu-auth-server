@@ -181,8 +181,10 @@ class Auth():
 
 		r = self.certificate_info()
 
-		assert r["success"] is True
-		response = r["response"]
+		if r["success"] == False: # delegated certificate
+			return {"success":False, "status_code":r["status_code"], "response":r["response"]}
+
+		response	= r["response"]
 
 		my_email	= response["id"]
 		my_serial	= response["serial"] 
