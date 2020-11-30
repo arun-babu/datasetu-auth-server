@@ -48,13 +48,11 @@ def topup_function(request, credentials, email, serial, fingerprint):
 		resp['razorpay_invoice_status'],\
 		resp['razorpay_payment_id']))
 
-	h = hmac.new (
-		key_secret,
-		challenge_string,
-		hashlib.sha256	
-	)
-
-	resp['razorpay_signature'] = "abcdef0123456789"
+	resp['razorpay_signature'] = hmac.new (
+			key_secret,
+			challenge_string,
+			hashlib.sha256	
+	).hexdigest()
 
 	return resp
 #
