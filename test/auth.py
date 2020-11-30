@@ -72,9 +72,12 @@ class Auth():
 		#
 		else:
 		#
-			sys.stderr.write (
-				"WARNING: auth did not send 'application/json' : " + url + "\n"
-			)
+			if "EXPECT_JSON" not in os.environ:
+			#
+				sys.stderr.write (
+					"WARNING: auth server did not send 'application/json' : " + url + "\n"
+				)
+			#
 
 			return {"success":ret, "response":None}
 		#

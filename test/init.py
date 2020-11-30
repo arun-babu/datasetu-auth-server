@@ -26,3 +26,11 @@ def expect_failure(b):
 		os.environ["EXPECT_FAILURE"] = "1"
 	else:
 		del os.environ["EXPECT_FAILURE"]
+
+def expect_json(b):
+	if b:
+		os.environ["EXPECT_JSON"] = "1"
+	else:
+		del os.environ["EXPECT_JSON"]
+
+expect_json(True) # by default all respond with a JSON

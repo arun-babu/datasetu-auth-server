@@ -61,7 +61,9 @@ assert r['status_code'] == 403
 # untrusted certificates cannot call any Marketplace API
 
 expect_failure(True)
+expect_json(False)
 r = untrusted.topup(100)
+expect_json(True)
 expect_failure(False)
 
 assert r["success"] is False
