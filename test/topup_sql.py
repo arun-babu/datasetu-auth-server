@@ -38,7 +38,7 @@ def topup_function(request, credentials, email, serial, fingerprint):
 		return {}
 
 	# form invoice, invoice signature
-	key_secret = "your-razorpay-key-secret"
+	key_secret = bytes("your-razorpay-key-secret".encode("utf-8"))
 
 	resp = {'razorpay_invoice_id': invoice_id,'razorpay_invoice_status': 'paid', \
 		'razorpay_payment_id':'pay_DaCTRWQeB2X5bI', 'razorpay_invoice_receipt':'TS1988'}
@@ -47,6 +47,12 @@ def topup_function(request, credentials, email, serial, fingerprint):
 		resp['razorpay_invoice_receipt'],\
 		resp['razorpay_invoice_status'],\
 		resp['razorpay_payment_id']))
+
+	h = hmac.new (
+		key_secret,
+		challenge_string,
+		hashlib.sha256	
+	)
 
 	resp['razorpay_signature'] = "abcdef0123456789"
 
