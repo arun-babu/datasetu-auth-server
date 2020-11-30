@@ -41,10 +41,15 @@ def topup_function(request, credentials, email, serial, fingerprint):
 	resp = {'razorpay_invoice_id': invoice_id,'razorpay_invoice_status': 'paid', \
 		'razorpay_payment_id':'pay_DaCTRWQeB2X5bI', 'razorpay_invoice_receipt':'TS1988'}
 
-	challenge_string = '|'.join((resp['razorpay_invoice_id'],\
-		resp['razorpay_invoice_receipt'],\
-		resp['razorpay_invoice_status'],\
-		resp['razorpay_payment_id']))
+	challenge_string = bytes(
+		'|'
+			.join((
+				resp['razorpay_invoice_id'],
+				resp['razorpay_invoice_receipt'],
+				resp['razorpay_invoice_status'],
+				resp['razorpay_payment_id']
+			))
+	).encode("utf-8")
 
 	resp['razorpay_signature'] = hmac.new (
 			key_secret,
