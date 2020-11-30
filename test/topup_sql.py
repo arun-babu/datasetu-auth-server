@@ -49,7 +49,7 @@ def topup_function(request, credentials, email, serial, fingerprint):
 	resp['razorpay_signature'] = hmac.new (
 			key_secret,
 			challenge_string,
-			hashlib.sha256	
+			digestmod=hashlib.sha256
 	).hexdigest()
 
 	return resp
