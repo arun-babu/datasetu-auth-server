@@ -50,7 +50,7 @@ def topup_function(request, credentials, email, serial, fingerprint):
 				resp['razorpay_invoice_status'],
 				resp['razorpay_payment_id']
 			])
-			.encoding("utf-8")
+			.encode("utf-8")
 	)
 
 	resp['razorpay_signature'] = hmac.new (
