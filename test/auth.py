@@ -2,7 +2,8 @@ import os
 import sys
 import json
 import requests
-#from topup_sql import topup_function
+
+from topup_sql import topup_function
 
 class Auth():
 #{
@@ -178,7 +179,16 @@ class Auth():
 			body['serial']		= serial
 			body['fingerprint']	= fingerprint
 
-		callback_params = topup_function(body, self.credentials)
+		r = self.certificate_info()
+
+		assert r["success"] is True
+		response = r["response"]
+
+		my_email	= response["id"]
+		my_serial	= response["serial"] 
+		my_fingerprint	= response["fingerprint"] 
+
+		callback_params = topup_function(body, self.credentials, my_email, my_serial, my_fingerprint)
 		# call topup-success API to confirm the topup
 
 		return self.call("marketplace/topup-success", callback_params)

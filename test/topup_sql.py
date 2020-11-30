@@ -1,24 +1,9 @@
 import json
 import time
 import psycopg2
-from cryptography import x509
-from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives import hashes, hmac
-from cryptography.hazmat.backends import default_backend
 
-def topup_function(request, credentials):
+def topup_function(request, credentials, email, serial, fingerprint):
 #
-	with open(credentials[0], "r") as f:
-		cert_file = f.read().strip()
-
-	cert	= x509.load_pem_x509_certificate(cert_file, default_backend())
-
-	email	= str(cert.subject.get_attributes_for_oid(NameOID.EMAIL_ADDRESS)[0].value)
-	serial	= '%x' % cert.serial_number # convert to hex
-
-	fingerprint = cert.fingerprint(hashes.SHA1()).encode('hex') # add colons in fingerprint
-	fingerprint = ':'.join(a+b for a,b in zip(fingerprint[::2], fingerprint[1::2]))
-
 	if 'serial' in request and 'fingerprint' in request:
 		serial		= request['serial']
 		fingerprint	= request['fingerprint']
