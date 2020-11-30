@@ -1,9 +1,7 @@
+import hmac
 import json
 import time
 import psycopg2
-
-from cryptography.hazmat.primitives import hmac, hashes
-from cryptography.hazmat.backends import default_backend
 
 def topup_function(request, credentials, email, serial, fingerprint):
 #
