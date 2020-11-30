@@ -5,12 +5,8 @@ from init import provider
 from init import alt_provider
 from init import untrusted
 from init import resource_server
-
 from init import expect_failure
-
 from init import restricted_consumer
-
-import hashlib
 
 RS = "iisc.datasetu.org"
 
@@ -26,8 +22,7 @@ expect_failure(False)
 assert r['success']	is False
 assert r['status_code']	== 402 # payment required
 
-amount = 20
-r = consumer.topup(amount)
+r = consumer.topup(20)
 
 r = consumer.get_token(body)
 assert r['success']			is True

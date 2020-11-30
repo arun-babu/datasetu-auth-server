@@ -2,6 +2,9 @@ import json
 import time
 import psycopg2
 
+from cryptography.hazmat.primitives import hmac, hashes
+from cryptography.hazmat.backends import default_backend
+
 def topup_function(request, credentials, email, serial, fingerprint):
 #
 	if 'serial' in request and 'fingerprint' in request:
@@ -45,7 +48,7 @@ def topup_function(request, credentials, email, serial, fingerprint):
 		resp['razorpay_invoice_status'],\
 		resp['razorpay_payment_id']))
 
-	h = hmac.HMAC(key_secret, hashes.SHA256(), backend=default_backend())
+	h = hmac.HMAC(bytes.fromhex(key_secret), hashes.SHA256(), backend=default_backend())
 	h.update(challenge_string)
 	resp['razorpay_signature'] = h.finalize().encode('hex')
 
