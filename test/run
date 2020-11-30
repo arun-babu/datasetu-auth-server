@@ -20,8 +20,6 @@ do
 	fi
 
 	echo $output | tee -a /tmp/report
-
-	echo | tee -a /tmp/report
 done
 
 end_time=$(date +%s)
