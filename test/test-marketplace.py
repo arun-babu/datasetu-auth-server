@@ -6,6 +6,7 @@ from init import delegate
 from init import alt_provider
 from init import untrusted
 from init import resource_server
+from init import expect_json
 from init import expect_failure
 from init import restricted_consumer
 
