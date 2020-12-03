@@ -331,54 +331,47 @@ const evaluator	= aperture.createEvaluator	(apertureOpts);
 
 /* --- functions --- */
 
-function new_token (issued_to)
-{
-	const random_hex	= crypto
-					.randomBytes(TOKEN_LEN)
-					.toString("hex");
-
-	// Token format = issued-by/issued-to/random-hex
-
-	return config.SERVER_NAME + "/" + issued_to + "/" + random_hex;
-}
-
-function new_server_token (issued_to)
+function new_token ()
 {
 	const random_hex = crypto
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-	// Server-token format = issued-to/random-hex 
+	// Token format = auth-server ~ random-hex
 
-	return issued_to + "/" + random_hex;
+	return config.SERVER_NAME + "~" + random_hex;
 }
 
-function is_valid_token (token, user = null)
+function new_server_token (resource_server)
+{
+	const random_hex = crypto
+				.randomBytes(TOKEN_LEN)
+				.toString("hex");
+
+	// Server-token format = resource-server ~ random-hex
+
+	return resource_server + "_" + random_hex;
+}
+
+function is_valid_token (token)
 {
 	if (! is_string_safe(token))
 		return false;
 
-	const split = token.split("/");
+	const split = token.split("~");
 
-	if (split.length !== 3)
+	if (split.length !== 2)
 		return false;
 
-	// Token looks like: issued-by/issued-to/random-hex
+	// Token looks like: issued-by ~ random-hex
 
 	const issued_by		= split[0];
-	const issued_to		= split[1];
-	const random_hex	= split[2];
+	const random_hex	= split[1];
 
 	if (issued_by !== config.SERVER_NAME)
 		return false;
 
 	if (random_hex.length !== TOKEN_LEN_HEX)
-		return false;
-
-	if (user && user !== issued_to)
-		return false;		// token was not issued to this user
-
-	if (! is_valid_email(issued_to))
 		return false;
 
 	return true;
@@ -403,9 +396,9 @@ function is_valid_servertoken (server_token, hostname)
 	if (! is_string_safe(server_token))
 		return false;
 
-	// Server Token looks like : resource-server-domain/random-hex
+	// Server Token looks like : resource-server ~ random-hex
 
-	const split = server_token.split("/");
+	const split = server_token.split("~");
 
 	if (split.length !== 2)
 		return false;
@@ -951,7 +944,7 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	exceptions = exceptions + "-/.@:";
+	exceptions = exceptions + "-/.@:~";
 
 	for (const ch of str)
 	{
@@ -2166,7 +2159,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			// key is the resource server's domain name
 
 			resource_server_token[key] = new_server_token(key);
- 
+
 			sha256_of_resource_server_token[key] = sha256 (
 				resource_server_token[key]
 			);
@@ -2298,27 +2291,20 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 		Object.freeze(consumer_request);
 	}
 
-	// Token looks like: issued-by/issued-to/random-hex
-
-	const split		= token.split("/");
-	const issued_to		= split[1];
-
-	const sha256_of_token	= sha256(token);
+	const sha256_of_token = sha256(token);
 
 	pool.query (
 
-		"SELECT expiry,request,cert_class,"		+
+		"SELECT id,expiry,request,cert_class,"		+
 		" server_token,providers"			+
 		" FROM token"					+
-		" WHERE id = $1::text"				+
-		" AND token = $2::text"				+
+		" WHERE token = $1::text"			+
 		" AND revoked = false"				+
 		" AND paid = true"				+
 		" AND expiry > NOW()"				+
 		" LIMIT 1",
 		[
-			issued_to,				// 1
-			sha256_of_token				// 2
+			sha256_of_token				// 1
 		],
 
 		(error, results) =>
@@ -2511,7 +2497,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 			}
 
 			const response = {
-				"consumer"			: issued_to,
+				"consumer"			: results.rows[0].id,
 				"expiry"			: results.rows[0].expiry,
 				"request"			: request_for_resource_server,
 				"consumer-certificate-class"	: results.rows[0].cert_class,
@@ -2521,11 +2507,13 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 
 				"UPDATE token SET introspected = true"	+
 				" WHERE token = $1::text"		+
+				" AND id = $2::text"			+
 				" AND introspected = false"		+
 				" AND revoked = false"			+
 				" AND expiry > NOW()",
 				[
 					sha256_of_token,		// 1
+					results.rows[0].id		// 2
 				],
 
 				(update_error) =>
@@ -2581,7 +2569,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 
 		for (const token of tokens)
 		{
-			if (! is_valid_token(token, id))
+			if (! is_valid_token(token))
 			{
 				const error_response = {
 					"message"		: "Invalid 'token'",
@@ -2779,16 +2767,18 @@ app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
 
 				"UPDATE token SET"			+
 				" providers = providers || $1::jsonb"	+
-				" WHERE cert_serial = $2::text"		+
-				" AND cert_fingerprint = $3::text"	+
+				" WHERE id = $2::text"			+
+				" AND cert_serial = $3::text"		+
+				" AND cert_fingerprint = $4::text"	+
 				" AND expiry > NOW()"			+
 				" AND revoked = false"			+
-				" AND providers-> $4::text = 'true'",
+				" AND providers-> $5::text = 'true'",
 				[
 					JSON.stringify(provider_false),	// 1
-					serial,				// 2
-					fingerprint,			// 3
-					provider_id_hash		// 4
+					id,				// 2
+					serial,				// 3
+					fingerprint,			// 4
+					provider_id_hash		// 5
 				],
 
 				(update_error, update_results) =>
@@ -4004,14 +3994,14 @@ app.get("/marketplace/topup-success", (req, res) => {
 app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
 
 	const id		= res.locals.email;
-	const body	= res.locals.body;
+	const body		= res.locals.body;
 	const cert		= res.locals.cert;
 	const cert_class	= res.locals.cert_class;
 
 	if (! body.token)
 		return ERROR (res, 400, "No 'token' found in the body");
 
-	if (! is_valid_token(body.token,id))
+	if (! is_valid_token(body.token))
 		return ERROR (res, 400, "Invalid 'token'");
 
 	const token		= body.token;

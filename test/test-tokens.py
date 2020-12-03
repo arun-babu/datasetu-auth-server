@@ -62,16 +62,16 @@ token = access_token['token'],
 if type(token) == TUPLE:
 	token = token[0]
 
-s = token.split("/")
+s = token.split("~")
 
-assert len(s)	== 3
+assert len(s)	== 2
 assert s[0]	== 'auth.datasetu.org'
 
 server_token = access_token['server-token'][RS]
 if type(server_token) == TUPLE:
 	server_token = server_token[0]
 
-s = server_token.split("/")
+s = server_token.split("~")
 
 assert len(s)	== 2
 assert s[0]	== RS
@@ -165,9 +165,9 @@ token = access_token['token']
 if type(token) == TUPLE:
 	token = token[0]
 
-s = token.split("/")
+s = token.split("~")
 
-assert len(s)	== 3
+assert len(s)	== 2
 assert s[0]	== 'auth.datasetu.org'
 
 r = provider.audit_tokens(100)
@@ -210,9 +210,9 @@ token = access_token['token']
 if type(token) == TUPLE:
 	token = token[0]
 
-s = token.split("/")
+s = token.split("~")
 
-assert len(s)	== 3
+assert len(s)	== 2
 assert s[0]	== 'auth.datasetu.org'
 
 r = provider.audit_tokens(5)
