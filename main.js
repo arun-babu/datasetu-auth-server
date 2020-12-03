@@ -337,9 +337,9 @@ function new_token ()
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-	// Token format = auth-server ~ random-hex
+	// Token format = auth-server / random-hex
 
-	return config.SERVER_NAME + "~" + random_hex;
+	return config.SERVER_NAME + "/" + random_hex;
 }
 
 function new_server_token (resource_server)
@@ -348,9 +348,9 @@ function new_server_token (resource_server)
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-	// Server-token format = resource-server ~ random-hex
+	// Server-token format = resource-server / random-hex
 
-	return resource_server + "~" + random_hex;
+	return resource_server + "/" + random_hex;
 }
 
 function is_valid_token (token)
@@ -358,12 +358,12 @@ function is_valid_token (token)
 	if (! is_string_safe(token))
 		return false;
 
-	const split = token.split("~");
+	const split = token.split("/");
 
 	if (split.length !== 2)
 		return false;
 
-	// Token looks like: issued-by ~ random-hex
+	// Token looks like: issued-by / random-hex
 
 	const issued_by		= split[0];
 	const random_hex	= split[1];
@@ -396,9 +396,9 @@ function is_valid_servertoken (server_token, hostname)
 	if (! is_string_safe(server_token))
 		return false;
 
-	// Server Token looks like : resource-server ~ random-hex
+	// Server Token looks like : resource-server UNDERSCORE random-hex
 
-	const split = server_token.split("~");
+	const split = server_token.split("/");
 
 	if (split.length !== 2)
 		return false;
@@ -944,7 +944,7 @@ function is_string_safe (str, exceptions = "")
 	if (str.length === 0 || str.length > MAX_SAFE_STRING_LEN)
 		return false;
 
-	exceptions = exceptions + "-/.@:~";
+	exceptions = exceptions + "-/.@:";
 
 	for (const ch of str)
 	{
