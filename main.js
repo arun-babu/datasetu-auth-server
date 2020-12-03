@@ -350,7 +350,7 @@ function new_server_token (resource_server)
 
 	// Server-token format = resource-server ~ random-hex
 
-	return resource_server + "_" + random_hex;
+	return resource_server + "~" + random_hex;
 }
 
 function is_valid_token (token)
