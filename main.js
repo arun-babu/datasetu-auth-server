@@ -38,7 +38,6 @@ const logger			= require("node-color-log");
 const lodash			= require("lodash");
 const cluster			= require("cluster");
 const express			= require("express");
-const timeout			= require("connect-timeout");
 const aperture			= require("./node-aperture");
 const safe_regex		= require("safe-regex");
 const geoip_lite		= require("geoip-lite");
@@ -256,7 +255,6 @@ const app = express();
 
 app.disable("x-powered-by");
 
-app.use(timeout("5s"));
 app.use(
 	cors ({
 		credentials	:	true,
