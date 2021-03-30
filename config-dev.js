@@ -1,5 +1,8 @@
 module.exports	= Object.freeze ({
 
+	SHA128_SALT		: "",
+	SHA256_SALT		: "My-Secret-Salt",
+
 	SERVER_NAME		: "auth.local",
 	ALLOWED_SERVER_NAMES    : ["localhost", "localhost:8443", "auth.local", "127.0.0.1", "127.0.0.1:8443"],
 

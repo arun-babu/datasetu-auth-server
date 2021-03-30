@@ -417,7 +417,7 @@ function sha1 (string)
 {
 	return crypto
 		.createHash("sha1")
-		.update(string)
+		.update(config.SHA128_SALT + string)
 		.digest("hex");
 }
 
@@ -425,7 +425,7 @@ function sha256 (string)
 {
 	return crypto
 		.createHash("sha256")
-		.update(string)
+		.update(config.SHA256_SALT + string)
 		.digest("hex");
 }
 

@@ -2,6 +2,9 @@ const fs	= require("fs");
 
 module.exports	=   Object.freeze ({
 
+	SHA128_SALT		: "",
+	SHA256_SALT		: "My-Secret-Salt",
+
 	SERVER_NAME		: "auth.datasetu.org",
 	ALLOWED_SERVER_NAMES    : ["auth.datasetu.org"],
 
