@@ -84,6 +84,7 @@ CREATE TABLE public.token (
 	introspected			boolean				NOT NULL,
 	revoked				boolean				NOT NULL,
 	cert_class			integer				NOT NULL,
+	cert_title			character varying		NOT NULL,
 
 	server_token			jsonb				NOT NULL,
 	providers			jsonb				NOT NULL,

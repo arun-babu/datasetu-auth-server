@@ -1456,6 +1456,8 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 	const cert				= res.locals.cert;
 	const cert_class			= res.locals.cert_class;
+	const cert_title			= res.locals.subject.title;
+
 	const body				= res.locals.body;
 	const consumer_id			= res.locals.email;
 
@@ -2181,14 +2183,15 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 			"false,"				+ // introspected
 			"false,"				+ // revoked
 			"$8::int,"				+
-			"$9::jsonb,"				+
+			"$9::text,"				+
 			"$10::jsonb,"				+
 			"$11::jsonb,"				+
 			"$12::jsonb,"				+
-			"$13::boolean,"				+
+			"$13::jsonb,"				+
+			"$14::boolean,"				+
 			"NULL,"					+ // paid_at
-			"$14::text,"				+ // api_called_from
-			"$15::jsonb"				+ // manual_authorization_array
+			"$15::text,"				+ // api_called_from
+			"$16::jsonb"				+ // manual_authorization_array
 	")";
 
 	const params = [
@@ -2200,13 +2203,14 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 		cert.fingerprint,				//  6
 		JSON.stringify(resource_id_dict),		//  7
 		cert_class,					//  8
-		JSON.stringify(sha256_of_resource_server_token),//  9
-		JSON.stringify(providers),			// 10
-		JSON.stringify(geoip),				// 11
-		JSON.stringify(payment_info),			// 12
-		paid,						// 13
-		req.headers.origin,				// 14
-		JSON.stringify(manual_authorization_array)	// 15
+		cert_title,					//  9
+		JSON.stringify(sha256_of_resource_server_token),// 10
+		JSON.stringify(providers),			// 11
+		JSON.stringify(geoip),				// 12
+		JSON.stringify(payment_info),			// 13
+		paid,						// 14
+		req.headers.origin,				// 15
+		JSON.stringify(manual_authorization_array)	// 16
 	];
 
 	pool.query (query, params, (error,results) =>
@@ -2499,6 +2503,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 				"expiry"			: results.rows[0].expiry,
 				"request"			: request_for_resource_server,
 				"consumer-certificate-class"	: results.rows[0].cert_class,
+				"consumer-certificate-title"	: results.rows[0].cert_title,
 			};
 
 			pool.query (
