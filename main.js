@@ -1456,7 +1456,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 
 	const cert				= res.locals.cert;
 	const cert_class			= res.locals.cert_class;
-	const cert_title			= res.locals.subject.title;
+	const cert_title			= cert.subject.title || "Unknown";
 
 	const body				= res.locals.body;
 	const consumer_id			= res.locals.email;
