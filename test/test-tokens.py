@@ -9,6 +9,7 @@ from init import resource_server
 from init import expect_failure
 
 from init import restricted_consumer
+from init import sha256_salt
 
 import hashlib
 
@@ -116,7 +117,7 @@ num_tokens_after = len(as_provider)
 # number of tokens before and after request by consumer
 assert num_tokens_after > num_tokens_before
 
-token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+token_hash = hashlib.sha256((sha256_salt + token).encode('utf-8')).hexdigest()
 
 token_hash_found = False
 found = None
@@ -328,7 +329,7 @@ assert r["success"] is True
 audit_report = r['response']
 as_provider = audit_report["as-provider"]
 
-token_hash = hashlib.sha256(access_token['token'].encode('utf-8')).hexdigest()
+token_hash = hashlib.sha256((sha256_salt + access_token['token']).encode('utf-8')).hexdigest()
 
 token_hash_found = False
 found = None

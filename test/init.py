@@ -13,6 +13,8 @@ example_dot_com		= Auth(home + "e-server.pem",	 home + "e-server.key.pem",	auth_
 restricted_consumer	= Auth(home + "restricted.pem",	 home + "restricted.key.pem",	auth_server)
 fake_resource_server	= Auth(home + "f-server.pem",	 home + "f-server.key.pem",	auth_server)
 
+sha256_salt		= "My-Secret-Salt"
+
 if "AUTH_SERVER" in os.environ and os.environ["AUTH_SERVER"] == "localhost":
 #
 	import urllib3
