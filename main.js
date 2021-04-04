@@ -1043,8 +1043,7 @@ function basic_security_check (req, res, next)
 	// replace all version with "/v1/"
 
 	const endpoint			= req.url.split("?")[0];
-	const api			= endpoint.replace(/\/v[1-2]\//,"/v1/");
-	const min_class_required	= MIN_CERT_CLASS_REQUIRED[api];
+	const min_class_required	= MIN_CERT_CLASS_REQUIRED [endpoint];
 
 	if (config.LAUNCH_ADMIN_PANEL)
 		process.send(endpoint);
@@ -1100,7 +1099,7 @@ function basic_security_check (req, res, next)
 		{
 			res.locals.untrusted = true;
 
-			if (api.startsWith("/marketplace/"))
+			if (endpoint.startsWith("/marketplace/"))
 			{
 				return ERROR (
 					res, 403,
@@ -1147,7 +1146,7 @@ function basic_security_check (req, res, next)
 				except in case of "/certificate-info"
 			*/
 
-			if (! api.endsWith("/certificate-info"))
+			if (! endpoint.endsWith("/certificate-info"))
 			{
 				return ERROR (
 					res, 403,
@@ -1303,7 +1302,7 @@ function basic_security_check (req, res, next)
 
 		if (min_class_required === 1)
 		{
-			if (! api.endsWith("/certificate-info"))
+			if (! endpoint.endsWith("/certificate-info"))
 			{
 				res.locals.cert_class = 1;
 			}
@@ -1452,7 +1451,7 @@ function to_array (o)
 
 /* --- Auth APIs --- */
 
-app.post("/auth/v[1-2]/token", (req, res) => {
+app.post("/auth/v1/token", (req, res) => {
 
 	const cert				= res.locals.cert;
 	const cert_class			= res.locals.cert_class;
@@ -2250,7 +2249,7 @@ app.post("/auth/v[1-2]/token", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/token/introspect", (req, res) => {
+app.post("/auth/v1/token/introspect", (req, res) => {
 
 	const cert			= res.locals.cert;
 	const body			= res.locals.body;
@@ -2537,7 +2536,7 @@ app.post("/auth/v[1-2]/token/introspect", (req, res) => {
 	);
 });
 
-app.post("/auth/v[1-2]/token/revoke", (req, res) => {
+app.post("/auth/v1/token/revoke", (req, res) => {
 
 	const id		= res.locals.email;
 	const body		= res.locals.body;
@@ -2704,7 +2703,7 @@ app.post("/auth/v[1-2]/token/revoke", (req, res) => {
 	return SUCCESS (res, response);
 });
 
-app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
+app.post("/auth/v1/token/revoke-all", (req, res) => {
 
 	const id		= res.locals.email;
 	const body		= res.locals.body;
@@ -2804,7 +2803,7 @@ app.post("/auth/v[1-2]/token/revoke-all", (req, res) => {
 	);
 });
 
-app.post("/auth/v[1-2]/acl/set", (req, res) => {
+app.post("/auth/v1/acl/set", (req, res) => {
 
 	const body		= res.locals.body;
 	const provider_id	= res.locals.email;
@@ -2918,7 +2917,7 @@ app.post("/auth/v[1-2]/acl/set", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/acl/append", (req, res) => {
+app.post("/auth/v1/acl/append", (req, res) => {
 
 	const body		= res.locals.body;
 	const provider_id	= res.locals.email;
@@ -3064,7 +3063,7 @@ app.post("/auth/v[1-2]/acl/append", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/acl", (req, res) => {
+app.post("/auth/v1/acl", (req, res) => {
 
 	const provider_id	= res.locals.email;
 
@@ -3118,7 +3117,7 @@ app.post("/auth/v[1-2]/acl", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/acl/revert", (req, res) => {
+app.post("/auth/v1/acl/revert", (req, res) => {
 
 	const provider_id	= res.locals.email;
 
@@ -3202,7 +3201,7 @@ app.post("/auth/v[1-2]/acl/revert", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/audit/tokens", (req, res) => {
+app.post("/auth/v1/audit/tokens", (req, res) => {
 
 	const id		= res.locals.email;
 	const body		= res.locals.body;
@@ -3341,7 +3340,7 @@ app.post("/auth/v[1-2]/audit/tokens", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/group/add", (req, res) => {
+app.post("/auth/v1/group/add", (req, res) => {
 
 	const body		= res.locals.body;
 	const provider_id	= res.locals.email;
@@ -3400,7 +3399,7 @@ app.post("/auth/v[1-2]/group/add", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/group/list", (req, res) => {
+app.post("/auth/v1/group/list", (req, res) => {
 
 	const body		= res.locals.body;
 	const provider_id	= res.locals.email;
@@ -3488,7 +3487,7 @@ app.post("/auth/v[1-2]/group/list", (req, res) => {
 	}
 });
 
-app.post("/auth/v[1-2]/group/delete", (req, res) => {
+app.post("/auth/v1/group/delete", (req, res) => {
 
 	const body		= res.locals.body;
 	const provider_id	= res.locals.email;
@@ -3558,7 +3557,7 @@ app.post("/auth/v[1-2]/group/delete", (req, res) => {
 	});
 });
 
-app.post("/auth/v[1-2]/certificate-info", (req, res) => {
+app.post("/auth/v1/certificate-info", (req, res) => {
 
 	const cert	= res.locals.cert;
 
@@ -3574,7 +3573,7 @@ app.post("/auth/v[1-2]/certificate-info", (req, res) => {
 
 /* --- Marketplace APIs --- */
 
-app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
+app.post("/marketplace/v1/credit/info", (req, res) => {
 
 	const id		= res.locals.email;
 	const cert		= res.locals.cert;
@@ -3653,7 +3652,7 @@ app.post("/marketplace/v[1-2]/credit/info", (req, res) => {
 	});
 });
 
-app.post("/marketplace/v[1-2]/credit/topup", (req, res) => {
+app.post("/marketplace/v1/credit/topup", (req, res) => {
 
 	const id		= res.locals.email;
 	const body		= res.locals.body;
@@ -3994,7 +3993,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 	});
 });
 
-app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
+app.post("/marketplace/v1/confirm-payment", (req, res) => {
 
 	const id		= res.locals.email;
 	const body		= res.locals.body;
@@ -4090,7 +4089,7 @@ app.post("/marketplace/v[1-2]/confirm-payment", (req, res) => {
 	);
 });
 
-app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
+app.post("/marketplace/v1/audit/credits", (req, res) => {
 
 	const id		= res.locals.email;
 	const body		= res.locals.body;
@@ -4234,7 +4233,7 @@ app.post("/marketplace/v[1-2]/audit/credits", (req, res) => {
 	});
 });
 
-app.post("/marketplace/v[1-2]/credit/transfer", (req, res) => {
+app.post("/marketplace/v1/credit/transfer", (req, res) => {
 
 	const id	= res.locals.email;
 	const body	= res.locals.body;
