@@ -55,13 +55,17 @@ This will store backups on /root/backups
 
 This project is released under [ISC license](https://opensource.org/licenses/ISC); and the [node-aperture](https://github.com/rbccps-iisc/node-aperture) is released under [Mozilla Public License 2.0](https://www.mozilla.org/en-US/MPL/2.0/).
 
-## 6. Database structure
+## 6. Contribute
+
+Please run `./check.sh` with NO warnings and NO errors before sending pull requests.
+
+## 7. Database structure
 
 Below is the list of tables used. There are no join queries in the project.
 
 ![Alt text](https://raw.githubusercontent.com/datasetu/datasetu-auth-server/master/er.svg?sanitize=true)
 
-## 7. Project organization 
+## 8. Project organization 
 ```bash
 .
 |-- CCAIndia2014.cer		// CCA's 2014 certificate
