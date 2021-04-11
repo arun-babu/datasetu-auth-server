@@ -394,7 +394,7 @@ function is_valid_servertoken (server_token, hostname)
 	if (! is_string_safe(server_token))
 		return false;
 
-	// Server Token looks like : resource-server UNDERSCORE random-hex
+	// Server Token looks like : resource-server / random-hex
 
 	const split = server_token.split("/");
 
