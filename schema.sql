@@ -99,7 +99,7 @@ CREATE TABLE public.token (
 
 	manual_authorization_array	jsonb				NOT NULL,
 
-	PRIMARY KEY (id, token)
+	PRIMARY KEY (token)
 );
 
 CREATE UNIQUE INDEX idx_token_id ON public.token(id,token,issued_at);
