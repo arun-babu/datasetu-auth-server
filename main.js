@@ -331,13 +331,36 @@ const evaluator	= aperture.createEvaluator	(apertureOpts);
 
 function new_token ()
 {
-	const random_hex = crypto
+	while (1)
+	{
+		const random_hex = crypto
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-	// Token format = auth-server / random-hex
+		// Token format = auth-server / random-hex
 
-	return config.SERVER_NAME + "/" + random_hex;
+		const token		= config.SERVER_NAME + "/" + random_hex;
+		const sha256_of_token	= sha256(token);
+
+		const rows = pg.querySync (
+
+			"SELECT 1"			+
+			" FROM token"			+
+			" WHERE token = $1::text"	+
+			" LIMIT 1",
+			[
+				sha256_of_token,	// 1
+			]
+		);
+
+		if (rows.length === 0)
+		{
+			return {
+				token		: token,
+				sha256_of_token	: sha256_of_token
+			};
+		}
+	}
 }
 
 function new_server_token (resource_server)
@@ -2082,11 +2105,9 @@ app.post("/auth/v1/token", (req, res) => {
 	if (num_rules_passed < 1 || num_rules_passed < request_array.length)
 		return ERROR (res, 403, "Unauthorized!");
 
-	const token	= new_token(consumer_id);
-
 	const response	= {
 
-		"token"			: token,
+		"token"			: null,		// to be filled later if everything is ok
 		"token-type"		: "DATASETU",
 		"expires-in"		: token_time,
 
@@ -2165,8 +2186,12 @@ app.post("/auth/v1/token", (req, res) => {
 		}
 	}
 
+	const t				= new_token();
+	const token			= t.token;
+	const sha256_of_token		= t.sha256_of_token;
+
+	response.token			= token;
 	response["server-token"]	= resource_server_token;
-	const sha256_of_token		= sha256(token);
 
 	const paid = total_payment_amount > 0.0 ? false : true;
 
