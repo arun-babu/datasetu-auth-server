@@ -34,7 +34,6 @@ const https			= require("https");
 const assert			= require("assert").strict;
 const chroot			= require("chroot");
 const crypto			= require("crypto");
-const logger			= require("node-color-log");
 const lodash			= require("lodash");
 const cluster			= require("cluster");
 const express			= require("express");
@@ -329,18 +328,23 @@ const evaluator	= aperture.createEvaluator	(apertureOpts);
 
 /* --- functions --- */
 
-function new_token ()
+function new_token (consumer)
 {
-	while (1)
+	while (true)
 	{
 		const random_hex = crypto
 				.randomBytes(TOKEN_LEN)
 				.toString("hex");
 
-		// Token format = auth-server / random-hex
+		// Token format = auth-server / consumer's email  / random-hex
 
-		const token		= config.SERVER_NAME + "/" + random_hex;
-		const sha256_of_token	= sha256(token);
+		const token = config.SERVER_NAME	+
+					"/"		+
+				consumer		+
+					"/"		+
+				random_hex;
+
+		const sha256_of_token = sha256(token);
 
 		const rows = pg.querySync (
 
@@ -381,15 +385,19 @@ function is_valid_token (token)
 
 	const split = token.split("/");
 
-	if (split.length !== 2)
+	if (split.length !== 3)
 		return false;
 
-	// Token looks like: issued-by / random-hex
+	// Token format = auth-server / consumer's email  / random-hex
 
 	const issued_by		= split[0];
-	const random_hex	= split[1];
+	const issued_to		= split[1];
+	const random_hex	= split[2];
 
 	if (issued_by !== config.SERVER_NAME)
+		return false;
+
+	if (! is_valid_email(issued_to))
 		return false;
 
 	if (random_hex.length !== TOKEN_LEN_HEX)
@@ -535,17 +543,19 @@ function send_telegram (message)
 	});
 }
 
-function log(color, msg)
+function log(type, msg)
 {
 	const message = new Date() + " | " + msg;
 
 	// error or info
 
-	if (color === "red" || color === "white") {
+	type = type.toUpperCase();
+
+	if (type === "ERROR") {
 		send_telegram(message);
 	}
 
-	logger.color(color).log(message);
+	console.log(type + " : " + message);
 }
 
 function SERVE_HTML (req,res)
@@ -583,7 +593,7 @@ function SUCCESS (res, response = null)
 function ERROR (res, http_status, error, exception = null)
 {
 	if (exception)
-		log("red", String(exception).replace(/\n/g," "));
+		log("ERROR", String(exception).replace(/\n/g," "));
 
 	res.setHeader("Content-Security-Policy",	"default-src 'none'");
 	res.setHeader("Content-Type",			"application/json");
@@ -760,7 +770,7 @@ function is_certificate_ok (req, cert, validate_email)
 				// As this could be a fraud commited by a sub-CA
 				// maybe revoke the sub-CA certificate
 
-				log ("red",
+				log ("ERROR",
 					"Invalid certificate: issuer = "+
 						issuer_domain		+
 					" and issued to = "		+
@@ -1538,7 +1548,7 @@ app.post("/auth/v1/token", (req, res) => {
 
 	if (tokens_rate_per_second > 1) // tokens per second
 	{
-		log ("red",
+		log ("ERROR",
 			"Too many requests from user : " + consumer_id +
 			", from ip : " + String (req.connection.remoteAddress)
 		);
@@ -2186,9 +2196,9 @@ app.post("/auth/v1/token", (req, res) => {
 		}
 	}
 
-	const t				= new_token();
-	const token			= t.token;
-	const sha256_of_token		= t.sha256_of_token;
+	const nt			= new_token(consumer_id);
+	const token			= nt.token;
+	const sha256_of_token		= nt.sha256_of_token;
 
 	response.token			= token;
 	response["server-token"]	= resource_server_token;
@@ -3935,7 +3945,7 @@ app.get("/marketplace/topup-success", (req, res) => {
 	{
 		if (error || results.rowCount === 0)
 		{
-			log ("red",error);
+			log ("ERROR",error);
 
 			const error_response = {
 				"message"	: "Internal error in topup confirmation",
@@ -4519,7 +4529,7 @@ if (cluster.isMaster)
 
 	cluster.on ("exit", (worker) => {
 
-		log("red","Worker " + worker.process.pid + " died.");
+		log("ERROR","Worker " + worker.process.pid + " died.");
 
 		cluster.fork();
 	});
@@ -4543,7 +4553,7 @@ if (cluster.isMaster)
 		);
 	}
 
-	log("white","Auth server started !");
+	log("INFO","Auth server started !");
 }
 else
 {
@@ -4551,7 +4561,7 @@ else
 
 	drop_worker_privileges();
 
-	log("green","Worker started with pid " + process.pid);
+	log("INFO","Worker started with pid " + process.pid);
 }
 
 // EOF
